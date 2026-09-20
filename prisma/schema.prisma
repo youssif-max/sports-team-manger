@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id             String           @id @default(cuid())
+  name           String
+  sport          String
+  season         String?
+  colorPrimary   String?          @default("#1d4ed8")
+  colorSecondary String?          @default("#0f172a")
+  logoUrl        String?
+  createdAt      DateTime         @default(now())
+  memberships    TeamMembership[]
+  events         Event[]
+  announcements  Announcement[]
+  chatMessages   ChatMessage[]
+  highlights     Highlight[]
+  statDefinitions StatDefinition[]
+}
+
+model User {
+  id            String           @id @default(cuid())
+  name          String
+  photoUrl      String?
+  email         String?
+  phone         String?
+  createdAt     DateTime         @default(now())
+  memberships   TeamMembership[]
+  chatMessages  ChatMessage[]
+  announcements Announcement[]
+  rsvps         Rsvp[]
+  attendance    Attendance[]
+  gameStats     GameStat[]
+  highlights    Highlight[]
+}
+
+enum Role {
+  COACH
+  PLAYER
+  PARENT
+}
+
+model TeamMembership {
+  id                     String    @id @default(cuid())
+  team                   Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId                 String
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                 String
+  role                   Role
+  jerseyNumber           String?
+  position               String?
+  emergencyContactName   String?
+  emergencyContactPhone  String?
+  joinedAt               DateTime  @default(now())
+
+  @@unique([teamId, userId])
+}
+
+enum EventType {
+  PRACTICE
+  GAME
+  OTHER
+}
+
+model Event {
+  id         String        @id @default(cuid())
+  team       Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId     String
+  type       EventType
+  title      String
+  startsAt   DateTime
+  location   String?
+  opponent   String?
+  notes      String?
+  createdAt  DateTime      @default(now())
+  attendance Attendance[]
+  rsvps      Rsvp[]
+  gameStats  GameStat[]
+  result     GameResult?
+  highlights Highlight[]
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  UNKNOWN
+}
+
+model Attendance {
+  id      String            @id @default(cuid())
+  event   Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  status  AttendanceStatus  @default(UNKNOWN)
+
+  @@unique([eventId, userId])
+}
+
+enum RsvpStatus {
+  IN
+  OUT
+  MAYBE
+  PENDING
+}
+
+model Rsvp {
+  id          String     @id @default(cuid())
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  status      RsvpStatus @default(PENDING)
+  respondedAt DateTime?
+
+  @@unique([eventId, userId])
+}
+
+model StatDefinition {
+  id        String     @id @default(cuid())
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  name      String
+  gameStats GameStat[]
+
+  @@unique([teamId, name])
+}
+
+model GameStat {
+  id               String         @id @default(cuid())
+  event            Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId          String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  statDefinition   StatDefinition @relation(fields: [statDefinitionId], references: [id], onDelete: Cascade)
+  statDefinitionId String
+  value            Float
+
+  @@unique([eventId, userId, statDefinitionId])
+}
+
+enum Outcome {
+  WIN
+  LOSS
+  TIE
+}
+
+model GameResult {
+  id            String  @id @default(cuid())
+  event         Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId       String  @unique
+  teamScore     Int
+  opponentScore Int
+  outcome       Outcome
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Highlight {
+  id          String   @id @default(cuid())
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?
+  event       Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  eventId     String?
+  title       String
+  description String?
+  videoUrl    String
+  createdAt   DateTime @default(now())
+}
