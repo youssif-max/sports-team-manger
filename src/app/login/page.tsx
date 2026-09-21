@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { switchToUser, createProfile } from "@/lib/actions/user";
 import { initials } from "@/lib/format";
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   const users = await prisma.user.findMany({ orderBy: { name: "asc" } });
 
