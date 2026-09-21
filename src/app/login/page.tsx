@@ -10,7 +10,7 @@ export default async function LoginPage() {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 px-4 py-10">
       <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight">🏆 TeamHub</h1>
+        <h1 className="text-2xl font-bold tracking-tight">🏆 SportSync</h1>
         <p className="mt-1 text-sm text-neutral-500">
           Sports team management for every sport.
         </p>

@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TeamHub — Sports Team Manager",
+  title: "SportSync — Sports Team Manager",
   description: "Manage rosters, schedules, stats, chat and highlights for any sport.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "TeamHub",
+    title: "SportSync",
   },
   icons: {
     icon: [

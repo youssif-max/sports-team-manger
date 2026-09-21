@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TeamHub — Sports Team Manager",
-    short_name: "TeamHub",
+    name: "SportSync — Sports Team Manager",
+    short_name: "SportSync",
     description: "Manage rosters, schedules, stats, and team chat for any sport.",
     start_url: "/",
     display: "standalone",

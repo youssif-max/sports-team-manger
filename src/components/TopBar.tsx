@@ -8,7 +8,7 @@ export function TopBar({ user }: { user: User }) {
     <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/90 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90">
       <div className="mx-auto flex h-[57px] max-w-5xl items-center justify-between px-4">
         <Link href="/" className="text-lg font-bold tracking-tight">
-          🏆 TeamHub
+          🏆 SportSync
         </Link>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
