@@ -2,22 +2,27 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { signIn } from "@/lib/actions/user";
+import { signUp } from "@/lib/actions/user";
 
-export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(signIn, undefined);
+export default function SignupPage() {
+  const [state, formAction, pending] = useActionState(signUp, undefined);
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 px-4 py-10">
       <div className="text-center">
         <h1 className="text-2xl font-bold tracking-tight">🏆 SportSync</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Sports team management for every sport.
+          Create your account to join or start a team.
         </p>
       </div>
 
       <form action={formAction} className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-neutral-500">Sign in</h2>
+        <input
+          name="name"
+          required
+          placeholder="Full name"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+        />
         <input
           name="email"
           type="email"
@@ -29,7 +34,14 @@ export default function LoginPage() {
           name="password"
           type="password"
           required
-          placeholder="Password"
+          placeholder="Password (min. 8 characters)"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+        />
+        <input
+          name="confirmPassword"
+          type="password"
+          required
+          placeholder="Confirm password"
           className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
         />
         {state?.error && (
@@ -40,14 +52,14 @@ export default function LoginPage() {
           disabled={pending}
           className="mt-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
         >
-          {pending ? "Signing in..." : "Sign In"}
+          {pending ? "Creating account..." : "Create Account"}
         </button>
       </form>
 
       <p className="text-center text-sm text-neutral-500">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className="font-medium text-blue-600 hover:underline">
-          Sign up
+        Already have an account?{" "}
+        <Link href="/login" className="font-medium text-blue-600 hover:underline">
+          Sign in
         </Link>
       </p>
     </main>

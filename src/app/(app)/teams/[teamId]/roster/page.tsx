@@ -1,6 +1,16 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
+import { AutoSubmitSelect } from "@/components/AutoSubmitSelect";
+import { getCurrentUser, getMembership } from "@/lib/auth";
+import { updateMemberRole } from "@/lib/actions/team";
+
+const ROLE_OPTIONS = [
+  { value: "ADMIN", label: "Admin" },
+  { value: "COACH", label: "Coach" },
+  { value: "PLAYER", label: "Player" },
+  { value: "PARENT", label: "Parent" },
+];
 
 export default async function RosterPage({
   params,
@@ -9,13 +19,20 @@ export default async function RosterPage({
 }) {
   const { teamId } = await params;
 
-  const memberships = await prisma.teamMembership.findMany({
-    where: { teamId },
-    include: { user: true },
-    orderBy: [{ role: "asc" }, { user: { name: "asc" } }],
-  });
+  const [memberships, user] = await Promise.all([
+    prisma.teamMembership.findMany({
+      where: { teamId },
+      include: { user: true },
+      orderBy: [{ role: "asc" }, { user: { name: "asc" } }],
+    }),
+    getCurrentUser(),
+  ]);
+
+  const myMembership = user ? await getMembership(teamId, user.id) : null;
+  const isAdmin = myMembership?.role === "ADMIN";
 
   const groups: Record<string, typeof memberships> = {
+    ADMIN: [],
     COACH: [],
     PLAYER: [],
     PARENT: [],
@@ -34,11 +51,17 @@ export default async function RosterPage({
         </Link>
       </div>
 
-      {(["COACH", "PLAYER", "PARENT"] as const).map((role) =>
+      {(["ADMIN", "COACH", "PLAYER", "PARENT"] as const).map((role) =>
         groups[role].length === 0 ? null : (
           <section key={role}>
             <h2 className="mb-2 text-sm font-semibold uppercase text-neutral-400">
-              {role === "COACH" ? "Coaches" : role === "PLAYER" ? "Players" : "Parents"}
+              {role === "ADMIN"
+                ? "Admins"
+                : role === "COACH"
+                ? "Coaches"
+                : role === "PLAYER"
+                ? "Players"
+                : "Parents"}
             </h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {groups[role].map((m) => (
@@ -57,6 +80,17 @@ export default async function RosterPage({
                       </p>
                     </div>
                   </div>
+
+                  {isAdmin && m.userId !== user!.id && (
+                    <AutoSubmitSelect
+                      name="role"
+                      defaultValue={m.role}
+                      options={ROLE_OPTIONS}
+                      action={updateMemberRole.bind(null, teamId, m.userId)}
+                      className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+                    />
+                  )}
+
                   <div className="flex gap-2">
                     <Link
                       href={`/teams/${teamId}/roster/${m.userId}#contact`}

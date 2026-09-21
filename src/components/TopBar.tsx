@@ -20,7 +20,7 @@ export function TopBar({ user }: { user: User }) {
               type="submit"
               className="text-xs font-medium text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
             >
-              Switch
+              Sign Out
             </button>
           </form>
         </div>

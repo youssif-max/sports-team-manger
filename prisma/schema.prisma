@@ -16,6 +16,7 @@ model Team {
   colorPrimary   String?          @default("#1d4ed8")
   colorSecondary String?          @default("#0f172a")
   logoUrl        String?
+  joinCode       String           @unique
   createdAt      DateTime         @default(now())
   memberships    TeamMembership[]
   events         Event[]
@@ -29,7 +30,8 @@ model User {
   id            String           @id @default(cuid())
   name          String
   photoUrl      String?
-  email         String?
+  email         String?          @unique
+  passwordHash  String?
   phone         String?
   createdAt     DateTime         @default(now())
   memberships   TeamMembership[]
@@ -42,6 +44,7 @@ model User {
 }
 
 enum Role {
+  ADMIN
   COACH
   PLAYER
   PARENT

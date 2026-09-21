@@ -2,26 +2,32 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { addExistingUserToTeam } from "@/lib/actions/team";
+import { JoinTeamForm } from "@/components/JoinTeamForm";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const teams = await prisma.team.findMany({
-    include: { memberships: true, _count: { select: { memberships: true } } },
+  const { error } = await searchParams;
+
+  const myTeams = await prisma.team.findMany({
+    where: { memberships: { some: { userId: user.id } } },
+    include: { _count: { select: { memberships: true } } },
     orderBy: { createdAt: "desc" },
   });
 
-  const myTeams = teams.filter((t) =>
-    t.memberships.some((m) => m.userId === user.id)
-  );
-  const otherTeams = teams.filter(
-    (t) => !t.memberships.some((m) => m.userId === user.id)
-  );
-
   return (
     <>
+      {error === "not-a-member" && (
+        <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
+          You&apos;re not a member of that team. Ask its admin or coach for the join code.
+        </div>
+      )}
+
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h1 className="text-xl font-bold">My Teams</h1>
@@ -61,41 +67,9 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {otherTeams.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-lg font-bold">Other Teams</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {otherTeams.map((team) => (
-              <div
-                key={team.id}
-                className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
-              >
-                <div>
-                  <h3 className="font-semibold">{team.name}</h3>
-                  <p className="text-xs text-neutral-500 capitalize">{team.sport}</p>
-                </div>
-                <form action={addExistingUserToTeam.bind(null, team.id)}>
-                  <input type="hidden" name="userId" value={user.id} />
-                  <select
-                    name="role"
-                    className="mr-2 rounded-lg border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
-                  >
-                    <option value="PLAYER">Player</option>
-                    <option value="COACH">Coach</option>
-                    <option value="PARENT">Parent</option>
-                  </select>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-neutral-800 px-3 py-1 text-xs font-semibold text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900"
-                  >
-                    Join
-                  </button>
-                </form>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <section>
+        <JoinTeamForm />
+      </section>
     </>
   );
 }
