@@ -90,7 +90,7 @@ export default async function EditPlayerPage({
 
         <button
           type="submit"
-          className="mt-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          className="mt-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
         >
           Save Changes
         </button>

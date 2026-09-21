@@ -8,10 +8,19 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
+enum TeamType {
+  CLUB
+  SCHOOL
+  RECREATIONAL
+  TRAVEL
+  OTHER
+}
+
 model Team {
   id             String           @id @default(cuid())
   name           String
   sport          String
+  teamType       TeamType         @default(OTHER)
   season         String?
   colorPrimary   String?          @default("#1d4ed8")
   colorSecondary String?          @default("#0f172a")

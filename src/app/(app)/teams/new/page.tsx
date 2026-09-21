@@ -14,6 +14,14 @@ const SPORTS = [
   "Other",
 ];
 
+const TEAM_TYPES = [
+  { value: "CLUB", label: "Club" },
+  { value: "SCHOOL", label: "School Team" },
+  { value: "RECREATIONAL", label: "Recreational League" },
+  { value: "TRAVEL", label: "Travel / Select Team" },
+  { value: "OTHER", label: "Other" },
+];
+
 export default function NewTeamPage() {
   return (
     <div className="mx-auto w-full max-w-md">
@@ -45,6 +53,22 @@ export default function NewTeamPage() {
         </label>
 
         <label className="text-sm font-medium">
+          Team type
+          <select
+            name="teamType"
+            required
+            defaultValue="CLUB"
+            className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+          >
+            {TEAM_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-sm font-medium">
           Season (optional)
           <input
             name="season"
@@ -65,7 +89,7 @@ export default function NewTeamPage() {
 
         <button
           type="submit"
-          className="mt-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          className="mt-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
         >
           Create Team
         </button>

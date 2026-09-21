@@ -1,3 +1,4 @@
+import { Play } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -66,7 +67,7 @@ export default async function HighlightsPage({
         />
         <button
           type="submit"
-          className="self-start rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          className="self-start rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
         >
           Add Highlight
         </button>
@@ -97,9 +98,9 @@ export default async function HighlightsPage({
                   href={h.videoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex aspect-video w-full items-center justify-center rounded-lg bg-neutral-900 text-sm font-medium text-white"
+                  className="flex aspect-video w-full items-center justify-center gap-1.5 rounded-lg bg-neutral-900 text-sm font-medium text-white"
                 >
-                  ▶ Watch video
+                  <Play size={16} fill="currentColor" /> Watch video
                 </a>
               )}
               <div className="flex items-start justify-between gap-2">

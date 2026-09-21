@@ -45,7 +45,7 @@ export default async function RosterPage({
         <h1 className="text-xl font-bold">Roster</h1>
         <Link
           href={`/teams/${teamId}/roster/new`}
-          className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+          className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
         >
           + Add Player
         </Link>

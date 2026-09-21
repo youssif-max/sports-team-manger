@@ -35,6 +35,18 @@ export function toDatetimeLocalValue(date: Date) {
   )}:${pad(date.getMinutes())}`;
 }
 
+const TEAM_TYPE_LABELS: Record<string, string> = {
+  CLUB: "Club",
+  SCHOOL: "School Team",
+  RECREATIONAL: "Recreational League",
+  TRAVEL: "Travel Team",
+  OTHER: "Team",
+};
+
+export function teamTypeLabel(teamType: string) {
+  return TEAM_TYPE_LABELS[teamType] ?? "Team";
+}
+
 export function initials(name: string) {
   return name
     .split(" ")

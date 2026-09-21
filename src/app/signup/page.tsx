@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { signUp } from "@/lib/actions/user";
+import { Logo } from "@/components/Logo";
 
 export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signUp, undefined);
@@ -10,7 +11,8 @@ export default function SignupPage() {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 px-4 py-10">
       <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight">🏆 SportSync</h1>
+        <Logo className="text-2xl" />
+        <h1 className="sr-only">Create account</h1>
         <p className="mt-1 text-sm text-neutral-500">
           Create your account to join or start a team.
         </p>
@@ -50,7 +52,7 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={pending}
-          className="mt-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+          className="mt-1 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
         >
           {pending ? "Creating account..." : "Create Account"}
         </button>
@@ -58,7 +60,7 @@ export default function SignupPage() {
 
       <p className="text-center text-sm text-neutral-500">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-blue-600 hover:underline">
+        <Link href="/login" className="font-medium text-brand-600 hover:underline">
           Sign in
         </Link>
       </p>

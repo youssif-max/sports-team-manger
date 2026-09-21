@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/format";
+import { EventTypeBadge } from "@/components/EventTypeBadge";
 
 export default async function TeamOverviewPage({
   params,
@@ -45,14 +46,14 @@ export default async function TeamOverviewPage({
         <p className="mt-1 text-2xl font-bold">
           {record.wins}-{record.losses}-{record.ties}
         </p>
-        <Link href={`/teams/${teamId}/standings`} className="text-xs text-blue-600 hover:underline">
+        <Link href={`/teams/${teamId}/standings`} className="text-xs text-brand-600 hover:underline">
           View standings →
         </Link>
       </div>
       <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <p className="text-xs font-semibold uppercase text-neutral-400">Roster</p>
         <p className="mt-1 text-2xl font-bold">{rosterCount}</p>
-        <Link href={`/teams/${teamId}/roster`} className="text-xs text-blue-600 hover:underline">
+        <Link href={`/teams/${teamId}/roster`} className="text-xs text-brand-600 hover:underline">
           View roster →
         </Link>
       </div>
@@ -61,7 +62,7 @@ export default async function TeamOverviewPage({
         <p className="mt-1 text-sm font-semibold">
           {nextEvents[0] ? formatDateTime(nextEvents[0].startsAt) : "Nothing scheduled"}
         </p>
-        <Link href={`/teams/${teamId}/schedule`} className="text-xs text-blue-600 hover:underline">
+        <Link href={`/teams/${teamId}/schedule`} className="text-xs text-brand-600 hover:underline">
           View schedule →
         </Link>
       </div>
@@ -79,10 +80,11 @@ export default async function TeamOverviewPage({
               className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3 text-sm hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
             >
               <div>
-                <p className="font-medium">
-                  {e.type === "GAME" ? "🏟️" : e.type === "PRACTICE" ? "🏃" : "📌"} {e.title}
-                </p>
-                <p className="text-xs text-neutral-500">{e.location}</p>
+                <div className="flex items-center gap-2">
+                  <EventTypeBadge type={e.type} />
+                  <p className="font-medium">{e.title}</p>
+                </div>
+                <p className="mt-0.5 text-xs text-neutral-500">{e.location}</p>
               </div>
               <p className="text-xs font-medium text-neutral-500">
                 {formatDateTime(e.startsAt)}
@@ -109,7 +111,7 @@ export default async function TeamOverviewPage({
           ))}
           <Link
             href={`/teams/${teamId}/announcements`}
-            className="text-xs text-blue-600 hover:underline"
+            className="text-xs text-brand-600 hover:underline"
           >
             View all →
           </Link>

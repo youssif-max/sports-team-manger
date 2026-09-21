@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
+import { MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { AutoSubmitSelect } from "@/components/AutoSubmitSelect";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { EventTypeBadge } from "@/components/EventTypeBadge";
 import { formatDateTime } from "@/lib/format";
 import {
   deleteEvent,
@@ -62,12 +64,19 @@ export default async function EventDetailPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
         <div>
+          <div className="mb-1 flex items-center gap-2">
+            <EventTypeBadge type={event.type} />
+          </div>
           <h1 className="text-xl font-bold">
             {event.title}
             {event.opponent ? ` vs ${event.opponent}` : ""}
           </h1>
           <p className="text-sm text-neutral-500">{formatDateTime(event.startsAt)}</p>
-          {event.location && <p className="text-sm text-neutral-500">📍 {event.location}</p>}
+          {event.location && (
+            <p className="flex items-center gap-1 text-sm text-neutral-500">
+              <MapPin size={14} /> {event.location}
+            </p>
+          )}
           {event.notes && <p className="mt-2 text-sm">{event.notes}</p>}
         </div>
         <form action={deleteEvent.bind(null, teamId, eventId)}>
@@ -122,7 +131,7 @@ export default async function EventDetailPage({
             </label>
             <button
               type="submit"
-              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
             >
               Save Result
             </button>
@@ -201,7 +210,7 @@ export default async function EventDetailPage({
             </div>
             <button
               type="submit"
-              className="self-start rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="self-start rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
             >
               Save Stats
             </button>

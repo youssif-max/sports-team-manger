@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/format";
-
-const TYPE_ICON: Record<string, string> = {
-  GAME: "🏟️",
-  PRACTICE: "🏃",
-  OTHER: "📌",
-};
+import { EventTypeBadge } from "@/components/EventTypeBadge";
 
 export default async function SchedulePage({
   params,
@@ -39,11 +34,14 @@ export default async function SchedulePage({
           className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3 text-sm hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
         >
           <div>
-            <p className="font-medium">
-              {TYPE_ICON[e.type]} {e.title}
-              {e.opponent ? ` vs ${e.opponent}` : ""}
-            </p>
-            <p className="text-xs text-neutral-500">{e.location}</p>
+            <div className="flex items-center gap-2">
+              <EventTypeBadge type={e.type} />
+              <p className="font-medium">
+                {e.title}
+                {e.opponent ? ` vs ${e.opponent}` : ""}
+              </p>
+            </div>
+            <p className="mt-0.5 text-xs text-neutral-500">{e.location}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-medium text-neutral-500">
@@ -66,7 +64,7 @@ export default async function SchedulePage({
         <h1 className="text-xl font-bold">Schedule</h1>
         <Link
           href={`/teams/${teamId}/schedule/new`}
-          className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+          className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
         >
           + Add Event
         </Link>

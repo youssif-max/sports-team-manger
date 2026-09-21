@@ -62,7 +62,7 @@ export function ChatRoom({ teamId, currentUserId }: { teamId: string; currentUse
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 && (
           <p className="text-center text-sm text-neutral-400">
-            No messages yet. Say hello 👋
+            No messages yet. Start the conversation.
           </p>
         )}
         {messages.map((m) => (
@@ -76,7 +76,7 @@ export function ChatRoom({ teamId, currentUserId }: { teamId: string; currentUse
             <div
               className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
                 m.author.id === currentUserId
-                  ? "rounded-br-sm bg-blue-600 text-white"
+                  ? "rounded-br-sm bg-brand-600 text-white"
                   : "rounded-bl-sm bg-neutral-100 dark:bg-neutral-800"
               }`}
             >
@@ -99,7 +99,7 @@ export function ChatRoom({ teamId, currentUserId }: { teamId: string; currentUse
         <button
           type="submit"
           disabled={isPending || !draft.trim()}
-          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
         >
           Send
         </button>

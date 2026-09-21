@@ -26,7 +26,7 @@ export function Avatar({
   return (
     <span
       style={{ width: size, height: size, fontSize: size * 0.38 }}
-      className="flex shrink-0 items-center justify-center rounded-full bg-blue-600 font-semibold text-white"
+      className="flex shrink-0 items-center justify-center rounded-full bg-brand-600 font-semibold text-white"
     >
       {initials(name)}
     </span>

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership } from "@/lib/auth";
 import { TeamNav } from "@/components/TeamNav";
+import { teamTypeLabel } from "@/lib/format";
 
 export default async function TeamLayout({
   children,
@@ -33,7 +34,7 @@ export default async function TeamLayout({
         <div>
           <h1 className="text-lg font-bold">{team.name}</h1>
           <p className="text-xs opacity-80">
-            {team.sport}
+            {teamTypeLabel(team.teamType)} · {team.sport}
             {team.season ? ` · ${team.season}` : ""}
           </p>
         </div>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { JoinTeamForm } from "@/components/JoinTeamForm";
+import { teamTypeLabel } from "@/lib/format";
 
 export default async function DashboardPage({
   searchParams,
@@ -33,7 +34,7 @@ export default async function DashboardPage({
           <h1 className="text-xl font-bold">My Teams</h1>
           <Link
             href="/teams/new"
-            className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
           >
             + Create Team
           </Link>
@@ -59,7 +60,8 @@ export default async function DashboardPage({
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-neutral-500">
-                  {team.season ?? "No season set"} · {team._count.memberships} members
+                  {teamTypeLabel(team.teamType)}
+                  {team.season ? ` · ${team.season}` : ""} · {team._count.memberships} members
                 </p>
               </Link>
             ))}

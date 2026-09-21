@@ -40,6 +40,12 @@ export async function createTeam(formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const sport = String(formData.get("sport") ?? "").trim();
+  const teamType = String(formData.get("teamType") ?? "OTHER") as
+    | "CLUB"
+    | "SCHOOL"
+    | "RECREATIONAL"
+    | "TRAVEL"
+    | "OTHER";
   const season = String(formData.get("season") ?? "").trim() || null;
   const colorPrimary = String(formData.get("colorPrimary") ?? "#1d4ed8");
   if (!name || !sport) return;
@@ -50,6 +56,7 @@ export async function createTeam(formData: FormData) {
     data: {
       name,
       sport,
+      teamType,
       season,
       colorPrimary,
       joinCode,
