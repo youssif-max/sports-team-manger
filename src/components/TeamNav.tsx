@@ -3,17 +3,21 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
+  CalendarCheck,
   Trophy,
   Megaphone,
   MessageCircle,
   Clapperboard,
+  ClipboardList,
 } from "lucide-react";
 
 const TABS = [
   { href: "", label: "Overview", Icon: LayoutDashboard },
   { href: "/roster", label: "Roster", Icon: Users },
   { href: "/schedule", label: "Schedule", Icon: Calendar },
+  { href: "/gamedays", label: "Game Days", Icon: CalendarCheck },
   { href: "/standings", label: "Standings", Icon: Trophy },
+  { href: "/playbook", label: "Playbook", Icon: ClipboardList },
   { href: "/announcements", label: "Announcements", Icon: Megaphone },
   { href: "/chat", label: "Chat", Icon: MessageCircle },
   { href: "/highlights", label: "Highlights", Icon: Clapperboard },

@@ -1,6 +1,16 @@
 import { createEvent } from "@/lib/actions/schedule";
 import { toDatetimeLocalValue, hoursFromNow } from "@/lib/format";
 
+const DAYS = [
+  { value: 0, label: "S" },
+  { value: 1, label: "M" },
+  { value: 2, label: "T" },
+  { value: 3, label: "W" },
+  { value: 4, label: "T" },
+  { value: 5, label: "F" },
+  { value: 6, label: "S" },
+];
+
 export default async function NewEventPage({
   params,
 }: {
@@ -74,6 +84,52 @@ export default async function NewEventPage({
             className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
           />
         </label>
+
+        <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+          <legend className="px-1 text-xs font-semibold text-neutral-500">
+            Repeat (optional)
+          </legend>
+          <label className="text-sm font-medium">
+            Repeat
+            <select
+              name="repeat"
+              defaultValue="none"
+              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+            >
+              <option value="none">Doesn&apos;t repeat</option>
+              <option value="weekly">Weekly, on selected days</option>
+            </select>
+          </label>
+
+          <div className="mt-3">
+            <p className="mb-1 text-sm font-medium">On these days</p>
+            <div className="flex flex-wrap gap-2">
+              {DAYS.map((d) => (
+                <label
+                  key={d.value}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-neutral-300 text-xs font-semibold has-checked:border-brand-600 has-checked:bg-brand-600 has-checked:text-white dark:border-neutral-700"
+                >
+                  <input
+                    type="checkbox"
+                    name="repeatDays"
+                    value={d.value}
+                    className="sr-only"
+                  />
+                  {d.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <label className="mt-3 block text-sm font-medium">
+            Repeat until
+            <input
+              type="date"
+              name="repeatUntil"
+              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </label>
+        </fieldset>
 
         <button
           type="submit"

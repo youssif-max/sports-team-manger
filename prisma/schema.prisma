@@ -33,6 +33,7 @@ model Team {
   chatMessages   ChatMessage[]
   highlights     Highlight[]
   statDefinitions StatDefinition[]
+  plays          Play[]
 }
 
 model User {
@@ -50,6 +51,7 @@ model User {
   attendance    Attendance[]
   gameStats     GameStat[]
   highlights    Highlight[]
+  plays         Play[]
 }
 
 enum Role {
@@ -82,21 +84,24 @@ enum EventType {
 }
 
 model Event {
-  id         String        @id @default(cuid())
-  team       Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId     String
-  type       EventType
-  title      String
-  startsAt   DateTime
-  location   String?
-  opponent   String?
-  notes      String?
-  createdAt  DateTime      @default(now())
-  attendance Attendance[]
-  rsvps      Rsvp[]
-  gameStats  GameStat[]
-  result     GameResult?
-  highlights Highlight[]
+  id               String        @id @default(cuid())
+  team             Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId           String
+  type             EventType
+  title            String
+  startsAt         DateTime
+  location         String?
+  opponent         String?
+  notes            String?
+  recurringGroupId String?
+  createdAt        DateTime      @default(now())
+  attendance       Attendance[]
+  rsvps            Rsvp[]
+  gameStats        GameStat[]
+  result           GameResult?
+  highlights       Highlight[]
+
+  @@index([recurringGroupId])
 }
 
 enum AttendanceStatus {
@@ -169,8 +174,8 @@ model GameResult {
   id            String  @id @default(cuid())
   event         Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId       String  @unique
-  teamScore     Int
-  opponentScore Int
+  teamScore     Int?
+  opponentScore Int?
   outcome       Outcome
 }
 
@@ -206,5 +211,18 @@ model Highlight {
   title       String
   description String?
   videoUrl    String
+  createdAt   DateTime @default(now())
+}
+
+model Play {
+  id          String   @id @default(cuid())
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String
+  title       String
+  description String?
+  diagram     String?  @db.Text
+  fileUrl     String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
   createdAt   DateTime @default(now())
 }

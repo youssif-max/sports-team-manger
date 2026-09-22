@@ -14,22 +14,72 @@ export async function createEvent(teamId: string, formData: FormData) {
   const location = String(formData.get("location") ?? "").trim() || null;
   const opponent = String(formData.get("opponent") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const repeat = String(formData.get("repeat") ?? "none");
 
   if (!title || !startsAtRaw) return;
+
+  const firstStart = new Date(startsAtRaw);
+  const members = await prisma.teamMembership.findMany({ where: { teamId } });
+
+  if (repeat === "weekly") {
+    const days = formData.getAll("repeatDays").map((d) => Number(d));
+    const untilRaw = String(formData.get("repeatUntil") ?? "");
+    const until = untilRaw ? new Date(`${untilRaw}T23:59:59`) : null;
+
+    if (days.length > 0 && until && until >= firstStart) {
+      const recurringGroupId = crypto.randomUUID();
+      const occurrences: Date[] = [];
+      const cursor = new Date(firstStart);
+      let daysScanned = 0;
+
+      while (cursor <= until && daysScanned < 730 && occurrences.length < 200) {
+        if (days.includes(cursor.getDay())) {
+          occurrences.push(new Date(cursor));
+        }
+        cursor.setDate(cursor.getDate() + 1);
+        daysScanned++;
+      }
+
+      const created = await prisma.$transaction(
+        occurrences.map((date) =>
+          prisma.event.create({
+            data: {
+              teamId,
+              type,
+              title,
+              startsAt: date,
+              location,
+              opponent,
+              notes,
+              recurringGroupId,
+            },
+          })
+        )
+      );
+
+      await prisma.rsvp.createMany({
+        data: created.flatMap((e) =>
+          members.map((m) => ({ eventId: e.id, userId: m.userId }))
+        ),
+      });
+
+      revalidatePath(`/teams/${teamId}/schedule`);
+      redirect(`/teams/${teamId}/schedule`);
+    }
+  }
 
   const event = await prisma.event.create({
     data: {
       teamId,
       type,
       title,
-      startsAt: new Date(startsAtRaw),
+      startsAt: firstStart,
       location,
       opponent,
       notes,
     },
   });
 
-  const members = await prisma.teamMembership.findMany({ where: { teamId } });
   await prisma.rsvp.createMany({
     data: members.map((m) => ({ eventId: event.id, userId: m.userId })),
   });
@@ -40,6 +90,12 @@ export async function createEvent(teamId: string, formData: FormData) {
 
 export async function deleteEvent(teamId: string, eventId: string) {
   await prisma.event.delete({ where: { id: eventId } });
+  revalidatePath(`/teams/${teamId}/schedule`);
+  redirect(`/teams/${teamId}/schedule`);
+}
+
+export async function deleteEventSeries(teamId: string, recurringGroupId: string) {
+  await prisma.event.deleteMany({ where: { teamId, recurringGroupId } });
   revalidatePath(`/teams/${teamId}/schedule`);
   redirect(`/teams/${teamId}/schedule`);
 }
@@ -113,6 +169,31 @@ export async function recordResult(teamId: string, eventId: string, formData: Fo
 
   revalidatePath(`/teams/${teamId}/schedule/${eventId}`);
   revalidatePath(`/teams/${teamId}/standings`);
+}
+
+export async function setGameOutcome(
+  teamId: string,
+  eventId: string,
+  outcome: "WIN" | "LOSS" | "TIE"
+) {
+  await prisma.gameResult.upsert({
+    where: { eventId },
+    update: { outcome },
+    create: { eventId, outcome },
+  });
+
+  revalidatePath(`/teams/${teamId}/gamedays`);
+  revalidatePath(`/teams/${teamId}/standings`);
+  revalidatePath(`/teams/${teamId}/schedule/${eventId}`);
+  revalidatePath(`/teams/${teamId}/schedule`);
+}
+
+export async function clearGameOutcome(teamId: string, eventId: string) {
+  await prisma.gameResult.delete({ where: { eventId } }).catch(() => undefined);
+
+  revalidatePath(`/teams/${teamId}/gamedays`);
+  revalidatePath(`/teams/${teamId}/standings`);
+  revalidatePath(`/teams/${teamId}/schedule/${eventId}`);
 }
 
 export async function recordStats(teamId: string, eventId: string, formData: FormData) {

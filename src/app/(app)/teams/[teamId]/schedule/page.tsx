@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/format";
 import { EventTypeBadge } from "@/components/EventTypeBadge";
+import { ScheduleCalendar } from "@/components/ScheduleCalendar";
+import { ScheduleViewTabs } from "@/components/ScheduleViewTabs";
 
 export default async function SchedulePage({
   params,
@@ -10,24 +12,26 @@ export default async function SchedulePage({
 }) {
   const { teamId } = await params;
   const now = new Date();
+  const rangeStart = new Date(now);
+  rangeStart.setDate(rangeStart.getDate() - 120);
+  const rangeEnd = new Date(now);
+  rangeEnd.setDate(rangeEnd.getDate() + 400);
 
-  const [upcoming, past] = await Promise.all([
-    prisma.event.findMany({
-      where: { teamId, startsAt: { gte: now } },
-      orderBy: { startsAt: "asc" },
-      include: { result: true },
-    }),
-    prisma.event.findMany({
-      where: { teamId, startsAt: { lt: now } },
-      orderBy: { startsAt: "desc" },
-      include: { result: true },
-      take: 15,
-    }),
-  ]);
+  const events = await prisma.event.findMany({
+    where: { teamId, startsAt: { gte: rangeStart, lte: rangeEnd } },
+    orderBy: { startsAt: "asc" },
+    include: { result: true },
+  });
 
-  const renderList = (events: typeof upcoming) => (
+  const upcoming = events.filter((e) => e.startsAt >= now);
+  const past = events
+    .filter((e) => e.startsAt < now)
+    .slice(-15)
+    .reverse();
+
+  const renderList = (list: typeof upcoming) => (
     <div className="flex flex-col gap-2">
-      {events.map((e) => (
+      {list.map((e) => (
         <Link
           key={e.id}
           href={`/teams/${teamId}/schedule/${e.id}`}
@@ -49,7 +53,10 @@ export default async function SchedulePage({
             </p>
             {e.result && (
               <p className="text-xs font-semibold">
-                {e.result.outcome} {e.result.teamScore}-{e.result.opponentScore}
+                {e.result.outcome}
+                {e.result.teamScore != null && e.result.opponentScore != null
+                  ? ` ${e.result.teamScore}-${e.result.opponentScore}`
+                  : ""}
               </p>
             )}
           </div>
@@ -58,18 +65,8 @@ export default async function SchedulePage({
     </div>
   );
 
-  return (
+  const listView = (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Schedule</h1>
-        <Link
-          href={`/teams/${teamId}/schedule/new`}
-          className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          + Add Event
-        </Link>
-      </div>
-
       <section>
         <h2 className="mb-2 text-sm font-semibold uppercase text-neutral-400">Upcoming</h2>
         {upcoming.length === 0 ? (
@@ -87,6 +84,34 @@ export default async function SchedulePage({
           renderList(past)
         )}
       </section>
+    </div>
+  );
+
+  const calendarView = (
+    <ScheduleCalendar
+      teamId={teamId}
+      events={events.map((e) => ({
+        id: e.id,
+        title: e.title,
+        type: e.type,
+        startsAt: e.startsAt.toISOString(),
+      }))}
+    />
+  );
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">Schedule</h1>
+        <Link
+          href={`/teams/${teamId}/schedule/new`}
+          className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
+        >
+          + Add Event
+        </Link>
+      </div>
+
+      <ScheduleViewTabs list={listView} calendar={calendarView} />
     </div>
   );
 }

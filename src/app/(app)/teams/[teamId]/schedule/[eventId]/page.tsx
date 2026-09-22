@@ -9,10 +9,12 @@ import { EventTypeBadge } from "@/components/EventTypeBadge";
 import { formatDateTime } from "@/lib/format";
 import {
   deleteEvent,
+  deleteEventSeries,
   setRsvpForm,
   setAttendanceForm,
   recordResult,
   recordStats,
+  setGameOutcome,
 } from "@/lib/actions/schedule";
 
 const RSVP_OPTIONS = [
@@ -79,14 +81,26 @@ export default async function EventDetailPage({
           )}
           {event.notes && <p className="mt-2 text-sm">{event.notes}</p>}
         </div>
-        <form action={deleteEvent.bind(null, teamId, eventId)}>
-          <ConfirmButton
-            confirmText="Delete this event? This cannot be undone."
-            className="text-xs font-medium text-red-600 hover:underline"
-          >
-            Delete event
-          </ConfirmButton>
-        </form>
+        <div className="flex flex-col items-end gap-1">
+          <form action={deleteEvent.bind(null, teamId, eventId)}>
+            <ConfirmButton
+              confirmText="Delete this event? This cannot be undone."
+              className="text-xs font-medium text-red-600 hover:underline"
+            >
+              Delete event
+            </ConfirmButton>
+          </form>
+          {event.recurringGroupId && (
+            <form action={deleteEventSeries.bind(null, teamId, event.recurringGroupId)}>
+              <ConfirmButton
+                confirmText="Delete this whole recurring series? Every practice in this series will be removed. This cannot be undone."
+                className="text-xs font-medium text-red-600 hover:underline"
+              >
+                Delete series
+              </ConfirmButton>
+            </form>
+          )}
+        </div>
       </div>
 
       {user && (
@@ -139,6 +153,24 @@ export default async function EventDetailPage({
               <span className="text-sm font-semibold">Current: {result.outcome}</span>
             )}
           </form>
+
+          <div className="mt-3 flex items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+            <span className="text-xs text-neutral-500">Or just log the result:</span>
+            {(["WIN", "LOSS", "TIE"] as const).map((o) => (
+              <form key={o} action={setGameOutcome.bind(null, teamId, eventId, o)}>
+                <button
+                  type="submit"
+                  className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+                    result?.outcome === o
+                      ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
+                      : "border border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  }`}
+                >
+                  {o === "WIN" ? "Win" : o === "LOSS" ? "Loss" : "Tie"}
+                </button>
+              </form>
+            ))}
+          </div>
         </section>
       )}
 
