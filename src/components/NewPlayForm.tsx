@@ -3,15 +3,18 @@
 import { useRef, useState } from "react";
 import { PlayCanvas, type PlayCanvasHandle } from "@/components/PlayCanvas";
 import { createPlay } from "@/lib/actions/plays";
-import { resizeImageFile } from "@/lib/resizeImage";
+import { resizeImageFile, fileToDataUrl } from "@/lib/resizeImage";
 
 type Mode = "draw" | "upload" | "link";
+
+const MAX_FILE_BYTES = 6 * 1024 * 1024;
 
 export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }) {
   const canvasRef = useRef<PlayCanvasHandle>(null);
   const diagramInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<Mode>("draw");
   const [preview, setPreview] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const action = createPlay.bind(null, teamId);
@@ -19,21 +22,34 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
   function switchMode(m: Mode) {
     setMode(m);
     setError(null);
-    if (m !== "upload") setPreview(null);
+    if (m !== "upload") {
+      setPreview(null);
+      setFileName(null);
+    }
     if (m === "link" && diagramInputRef.current) diagramInputRef.current.value = "";
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_FILE_BYTES) {
+      setError("That file is too large (max 6MB). Try a smaller file or use a link instead.");
+      return;
+    }
+
     setProcessing(true);
     setError(null);
+    setFileName(file.name);
     try {
-      const dataUrl = await resizeImageFile(file);
+      const dataUrl = file.type.startsWith("image/")
+        ? await resizeImageFile(file)
+        : await fileToDataUrl(file);
       if (diagramInputRef.current) diagramInputRef.current.value = dataUrl;
-      setPreview(dataUrl);
+      setPreview(dataUrl.startsWith("data:image/") ? dataUrl : null);
     } catch {
-      setError("Couldn't read that photo. Try a different one.");
+      setError("Couldn't read that file. Try a different one.");
+      setFileName(null);
     } finally {
       setProcessing(false);
     }
@@ -74,7 +90,7 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
                 : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
             }`}
           >
-            {m === "draw" ? "Draw a play" : m === "upload" ? "Upload a photo" : "Attach a link"}
+            {m === "draw" ? "Draw a play" : m === "upload" ? "Upload a file" : "Attach a link"}
           </button>
         ))}
       </div>
@@ -85,19 +101,26 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
         <div className="flex flex-col gap-2">
           <input
             type="file"
-            accept="image/*"
             onChange={handleFileChange}
             className="text-sm text-neutral-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-700"
           />
-          {processing && <p className="text-xs text-neutral-500">Processing photo...</p>}
+          <p className="text-xs text-neutral-400">
+            Any file up to 6MB — photos, screenshots, or PDFs.
+          </p>
+          {processing && <p className="text-xs text-neutral-500">Processing file...</p>}
           {error && <p className="text-xs font-medium text-red-600">{error}</p>}
           {preview && (
             // eslint-disable-next-line @next/next/no-img-element -- locally-processed data URL, not optimizable by next/image
             <img
               src={preview}
-              alt="Selected play photo"
+              alt="Selected play file"
               className="max-w-full rounded-lg border border-neutral-200 dark:border-neutral-800"
             />
+          )}
+          {!preview && fileName && !processing && !error && (
+            <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+              Selected: {fileName}
+            </p>
           )}
         </div>
       )}

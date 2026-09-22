@@ -41,13 +41,23 @@ export default async function PlaybookPage({
               key={p.id}
               className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
             >
-              {p.diagram ? (
-                // eslint-disable-next-line @next/next/no-img-element -- locally-drawn data URL, not optimizable by next/image
+              {p.diagram?.startsWith("data:image/") ? (
+                // eslint-disable-next-line @next/next/no-img-element -- locally-drawn/uploaded data URL, not optimizable by next/image
                 <img
                   src={p.diagram}
                   alt={p.title}
                   className="w-full rounded-lg border border-neutral-200 dark:border-neutral-800"
                 />
+              ) : p.diagram ? (
+                <a
+                  href={p.diagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  download
+                  className="flex aspect-[4/3] w-full items-center justify-center gap-1.5 rounded-lg bg-neutral-100 text-sm font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+                >
+                  <FileText size={16} /> Open attached file
+                </a>
               ) : p.fileUrl ? (
                 <a
                   href={p.fileUrl}
