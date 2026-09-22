@@ -12,6 +12,7 @@ const MAX_FILE_BYTES = 6 * 1024 * 1024;
 export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }) {
   const canvasRef = useRef<PlayCanvasHandle>(null);
   const diagramInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<Mode>("draw");
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -26,7 +27,10 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
       setPreview(null);
       setFileName(null);
     }
-    if (m === "link" && diagramInputRef.current) diagramInputRef.current.value = "";
+    if (m === "link") {
+      if (diagramInputRef.current) diagramInputRef.current.value = "";
+      if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+    }
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -41,6 +45,7 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
     setProcessing(true);
     setError(null);
     setFileName(file.name);
+    if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
     try {
       const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
 
@@ -55,15 +60,26 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
       let dataUrl: string;
       if (isPdf) {
         dataUrl = await fileToDataUrl(file);
+
+        // Best-effort cover image: some browsers (Safari) can rasterize a
+        // PDF's first page as a small preview. Most others simply can't —
+        // that's fine, the play just falls back to a plain file link.
+        try {
+          const cover = await resizeImageFile(file, 500, 0.75);
+          if (thumbnailInputRef.current) thumbnailInputRef.current.value = cover;
+          setPreview(cover);
+        } catch {
+          setPreview(null);
+        }
       } else {
         try {
           dataUrl = await resizeImageFile(file);
         } catch {
           dataUrl = await fileToDataUrl(file);
         }
+        setPreview(dataUrl.startsWith("data:image/") ? dataUrl : null);
       }
       if (diagramInputRef.current) diagramInputRef.current.value = dataUrl;
-      setPreview(dataUrl.startsWith("data:image/") ? dataUrl : null);
     } catch {
       setError("Couldn't read that file. Try a different one.");
       setFileName(null);
@@ -73,14 +89,18 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
   }
 
   function handleSubmit() {
-    if (mode === "draw" && diagramInputRef.current) {
-      diagramInputRef.current.value = canvasRef.current?.getDataUrl() ?? "";
+    if (mode === "draw") {
+      if (diagramInputRef.current) {
+        diagramInputRef.current.value = canvasRef.current?.getDataUrl() ?? "";
+      }
+      if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
     }
   }
 
   return (
     <form action={action} onSubmit={handleSubmit} className="flex flex-col gap-4">
       <input type="hidden" name="diagram" ref={diagramInputRef} />
+      <input type="hidden" name="thumbnail" ref={thumbnailInputRef} />
 
       <input
         name="title"

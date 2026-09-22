@@ -12,12 +12,13 @@ export async function createPlay(teamId: string, formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const diagram = String(formData.get("diagram") ?? "").trim() || null;
+  const thumbnail = String(formData.get("thumbnail") ?? "").trim() || null;
   const fileUrl = String(formData.get("fileUrl") ?? "").trim() || null;
 
   if (!title || (!diagram && !fileUrl)) return;
 
   await prisma.play.create({
-    data: { teamId, title, description, diagram, fileUrl, createdById: user!.id },
+    data: { teamId, title, description, diagram, thumbnail, fileUrl, createdById: user!.id },
   });
 
   revalidatePath(`/teams/${teamId}/playbook`);

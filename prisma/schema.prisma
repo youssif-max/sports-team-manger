@@ -221,6 +221,7 @@ model Play {
   title       String
   description String?
   diagram     String?  @db.Text
+  thumbnail   String?  @db.Text
   fileUrl     String?
   createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdById String?

@@ -1,31 +1,29 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
-
-function dataUrlToObjectUrl(dataUrl: string): string {
-  const [header, base64] = dataUrl.split(",");
-  const mime = header.match(/data:(.*?);base64/)?.[1] ?? "application/octet-stream";
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return URL.createObjectURL(new Blob([bytes], { type: mime }));
-}
+import { dataUrlToObjectUrl } from "@/lib/dataUrl";
 
 export function PlayFileLink({ dataUrl, title }: { dataUrl: string; title: string }) {
-  const href = useMemo(() => dataUrlToObjectUrl(dataUrl), [dataUrl]);
+  const [href, setHref] = useState<string | null>(null);
 
   useEffect(() => {
-    return () => URL.revokeObjectURL(href);
-  }, [href]);
+    // Object URLs must only ever be created on the client: creating one
+    // during server rendering (Node supports the API too) produces a
+    // different value than the client does, causing a hydration mismatch.
+    const url = dataUrlToObjectUrl(dataUrl);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only resource, cannot be computed during render/SSR
+    setHref(url);
+    return () => URL.revokeObjectURL(url);
+  }, [dataUrl]);
 
   return (
     <a
-      href={href}
+      href={href ?? undefined}
       download={title}
       className="flex aspect-[4/3] w-full items-center justify-center gap-1.5 rounded-lg bg-neutral-100 text-sm font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
     >
-      <FileText size={16} /> Open attached file
+      <FileText size={16} /> {href ? "Open attached file" : "Loading..."}
     </a>
   );
 }

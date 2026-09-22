@@ -43,7 +43,7 @@ export default async function PlaybookPage({
               className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
             >
               {p.diagram ? (
-                <PlayThumbnail diagram={p.diagram} title={p.title} />
+                <PlayThumbnail diagram={p.diagram} thumbnail={p.thumbnail} title={p.title} />
               ) : p.fileUrl ? (
                 <a
                   href={p.fileUrl}
