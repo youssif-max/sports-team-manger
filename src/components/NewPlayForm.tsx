@@ -42,16 +42,25 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
     setError(null);
     setFileName(file.name);
     try {
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+
       // Try treating it as an image first regardless of the reported MIME
       // type — iOS in particular sometimes hands over HEIC photos without a
       // proper "image/..." type, which would otherwise be misdetected as a
-      // generic file. Anything the browser genuinely can't decode as an
-      // image (PDFs, etc.) falls back to a plain file attachment.
+      // generic file. PDFs are excluded from this: some browsers (Safari in
+      // particular) can partially "decode" a PDF as an image, but only its
+      // first page, which would silently turn a multi-page document into a
+      // single flattened picture. Anything that genuinely isn't a
+      // browser-decodable image falls back to a plain file attachment.
       let dataUrl: string;
-      try {
-        dataUrl = await resizeImageFile(file);
-      } catch {
+      if (isPdf) {
         dataUrl = await fileToDataUrl(file);
+      } else {
+        try {
+          dataUrl = await resizeImageFile(file);
+        } catch {
+          dataUrl = await fileToDataUrl(file);
+        }
       }
       if (diagramInputRef.current) diagramInputRef.current.value = dataUrl;
       setPreview(dataUrl.startsWith("data:image/") ? dataUrl : null);

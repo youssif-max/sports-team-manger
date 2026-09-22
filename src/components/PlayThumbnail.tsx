@@ -17,7 +17,10 @@ export function PlayThumbnail({ diagram, title }: { diagram: string; title: stri
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [expanded]);
 
-  if (failed) {
+  // Some browsers (Safari in particular) can partially "decode" a PDF as an
+  // <img>, but only its first page — so non-image attachments must never be
+  // rendered as an image at all, not even as a fallback attempt.
+  if (failed || !diagram.startsWith("data:image/")) {
     return <PlayFileLink dataUrl={diagram} title={title} />;
   }
 
