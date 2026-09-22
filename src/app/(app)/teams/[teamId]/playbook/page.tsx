@@ -3,6 +3,7 @@ import { FileText } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { PlayFileLink } from "@/components/PlayFileLink";
 import { deletePlay } from "@/lib/actions/plays";
 
 export default async function PlaybookPage({
@@ -49,15 +50,7 @@ export default async function PlaybookPage({
                   className="w-full rounded-lg border border-neutral-200 dark:border-neutral-800"
                 />
               ) : p.diagram ? (
-                <a
-                  href={p.diagram}
-                  target="_blank"
-                  rel="noreferrer"
-                  download
-                  className="flex aspect-[4/3] w-full items-center justify-center gap-1.5 rounded-lg bg-neutral-100 text-sm font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
-                >
-                  <FileText size={16} /> Open attached file
-                </a>
+                <PlayFileLink dataUrl={p.diagram} title={p.title} />
               ) : p.fileUrl ? (
                 <a
                   href={p.fileUrl}
