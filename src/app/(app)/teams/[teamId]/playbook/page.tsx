@@ -3,7 +3,7 @@ import { FileText } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { PlayFileLink } from "@/components/PlayFileLink";
+import { PlayThumbnail } from "@/components/PlayThumbnail";
 import { deletePlay } from "@/lib/actions/plays";
 
 export default async function PlaybookPage({
@@ -42,15 +42,8 @@ export default async function PlaybookPage({
               key={p.id}
               className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
             >
-              {p.diagram?.startsWith("data:image/") ? (
-                // eslint-disable-next-line @next/next/no-img-element -- locally-drawn/uploaded data URL, not optimizable by next/image
-                <img
-                  src={p.diagram}
-                  alt={p.title}
-                  className="w-full rounded-lg border border-neutral-200 dark:border-neutral-800"
-                />
-              ) : p.diagram ? (
-                <PlayFileLink dataUrl={p.diagram} title={p.title} />
+              {p.diagram ? (
+                <PlayThumbnail diagram={p.diagram} title={p.title} />
               ) : p.fileUrl ? (
                 <a
                   href={p.fileUrl}
