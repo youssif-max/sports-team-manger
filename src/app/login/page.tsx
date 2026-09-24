@@ -1,12 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { signIn } from "@/lib/actions/user";
 import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(signIn, undefined);
+  const [redirectTo, setRedirectTo] = useState("/");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads from window.location, unavailable during SSR; must run post-mount
+    setRedirectTo(params.get("redirect") || "/");
+  }, []);
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 px-4 py-10">
@@ -19,6 +26,7 @@ export default function LoginPage() {
       </div>
 
       <form action={formAction} className="flex flex-col gap-3">
+        <input type="hidden" name="redirect" value={redirectTo} />
         <h2 className="text-sm font-semibold text-neutral-500">Sign in</h2>
         <input
           name="email"
@@ -48,7 +56,10 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-neutral-500">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="font-medium text-brand-600 hover:underline">
+        <Link
+          href={redirectTo === "/" ? "/signup" : `/signup?redirect=${encodeURIComponent(redirectTo)}`}
+          className="font-medium text-brand-600 hover:underline"
+        >
           Sign up
         </Link>
       </p>

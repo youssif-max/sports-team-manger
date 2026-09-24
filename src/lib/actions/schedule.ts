@@ -3,6 +3,29 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { sendPushToTeam } from "@/lib/actions/push";
+
+async function notifyGameResult(
+  teamId: string,
+  eventId: string,
+  outcome: "WIN" | "LOSS" | "TIE",
+  scoreLine: string | null
+) {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: { team: true },
+  });
+  if (!event) return;
+
+  const label = outcome === "WIN" ? "Win" : outcome === "LOSS" ? "Loss" : "Tie";
+  const opponentLine = event.opponent ? ` vs ${event.opponent}` : "";
+
+  await sendPushToTeam(teamId, {
+    title: `${event.team.name}: ${label}${opponentLine}`,
+    body: scoreLine ? `Final score: ${scoreLine}` : `${event.title} result is in.`,
+    url: `/teams/${teamId}/schedule/${eventId}`,
+  });
+}
 
 export async function createEvent(teamId: string, formData: FormData) {
   const type = String(formData.get("type") ?? "PRACTICE") as
@@ -169,6 +192,8 @@ export async function recordResult(teamId: string, eventId: string, formData: Fo
 
   revalidatePath(`/teams/${teamId}/schedule/${eventId}`);
   revalidatePath(`/teams/${teamId}/standings`);
+
+  await notifyGameResult(teamId, eventId, outcome, `${teamScore}-${opponentScore}`);
 }
 
 export async function setGameOutcome(
@@ -186,6 +211,8 @@ export async function setGameOutcome(
   revalidatePath(`/teams/${teamId}/standings`);
   revalidatePath(`/teams/${teamId}/schedule/${eventId}`);
   revalidatePath(`/teams/${teamId}/schedule`);
+
+  await notifyGameResult(teamId, eventId, outcome, null);
 }
 
 export async function clearGameOutcome(teamId: string, eventId: string) {

@@ -7,6 +7,11 @@ import { setCurrentUserCookie, clearCurrentUserCookie } from "@/lib/auth";
 
 export type AuthFormState = { error?: string } | undefined;
 
+function safeRedirectTarget(formData: FormData): string {
+  const target = String(formData.get("redirect") ?? "");
+  return target.startsWith("/") && !target.startsWith("//") ? target : "/";
+}
+
 export async function signUp(
   _prevState: AuthFormState,
   formData: FormData
@@ -39,7 +44,7 @@ export async function signUp(
       data: { name, passwordHash },
     });
     await setCurrentUserCookie(existing.id);
-    redirect("/");
+    redirect(safeRedirectTarget(formData));
   }
 
   const user = await prisma.user.create({
@@ -47,7 +52,7 @@ export async function signUp(
   });
 
   await setCurrentUserCookie(user.id);
-  redirect("/");
+  redirect(safeRedirectTarget(formData));
 }
 
 export async function signIn(
@@ -72,7 +77,7 @@ export async function signIn(
   }
 
   await setCurrentUserCookie(user.id);
-  redirect("/");
+  redirect(safeRedirectTarget(formData));
 }
 
 export async function signOut() {

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership } from "@/lib/auth";
 import { TeamNav } from "@/components/TeamNav";
+import { CopyInviteLink } from "@/components/CopyInviteLink";
 import { teamTypeLabel } from "@/lib/format";
 
 export default async function TeamLayout({
@@ -40,9 +41,12 @@ export default async function TeamLayout({
         </div>
         <div className="flex items-center gap-2">
           {canSeeJoinCode && (
-            <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold tracking-widest backdrop-blur">
-              Join code: {team.joinCode}
-            </span>
+            <>
+              <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold tracking-widest backdrop-blur">
+                Join code: {team.joinCode}
+              </span>
+              <CopyInviteLink joinCode={team.joinCode} />
+            </>
           )}
           <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold capitalize backdrop-blur">
             {membership.role.toLowerCase()}

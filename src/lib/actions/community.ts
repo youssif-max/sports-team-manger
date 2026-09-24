@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { sendPushToTeam } from "@/lib/actions/push";
 
 export async function postChatMessage(teamId: string, formData: FormData) {
   const user = await getCurrentUser();
@@ -27,12 +28,23 @@ export async function postAnnouncement(teamId: string, formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   if (!title || !body) return;
 
-  await prisma.announcement.create({
+  const team = await prisma.announcement.create({
     data: { teamId, authorId: user!.id, title, body },
+    include: { team: true },
   });
 
   revalidatePath(`/teams/${teamId}/announcements`);
   revalidatePath(`/teams/${teamId}`);
+
+  await sendPushToTeam(
+    teamId,
+    {
+      title: `${team.team.name}: ${title}`,
+      body,
+      url: `/teams/${teamId}/announcements`,
+    },
+    user!.id
+  );
 }
 
 export async function deleteAnnouncement(teamId: string, id: string) {

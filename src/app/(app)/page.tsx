@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { JoinTeamForm } from "@/components/JoinTeamForm";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { teamTypeLabel } from "@/lib/format";
 
 export default async function DashboardPage({
@@ -23,6 +24,8 @@ export default async function DashboardPage({
 
   return (
     <>
+      <NotificationPrompt />
+
       {error === "not-a-member" && (
         <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
           You&apos;re not a member of that team. Ask its admin or coach for the join code.
