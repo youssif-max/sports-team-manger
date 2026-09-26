@@ -7,11 +7,25 @@ import { sendPushToTeam } from "@/lib/actions/push";
 import { isSafeHttpUrl } from "@/lib/url";
 import { isTeamPremium, FREE_HIGHLIGHT_LIMIT } from "@/lib/billing";
 
+const MAX_CHAT_MESSAGES_PER_WINDOW = 10;
+const CHAT_RATE_WINDOW_MS = 10_000;
+
 export async function postChatMessage(teamId: string, formData: FormData) {
   const { user } = await requireMembership(teamId);
 
-  const body = String(formData.get("body") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim().slice(0, 2000);
   if (!body) return;
+
+  // Lightweight anti-spam check: a DB round trip (not in-memory) so it still
+  // works correctly across multiple serverless instances.
+  const recentCount = await prisma.chatMessage.count({
+    where: {
+      teamId,
+      authorId: user.id,
+      createdAt: { gte: new Date(Date.now() - CHAT_RATE_WINDOW_MS) },
+    },
+  });
+  if (recentCount >= MAX_CHAT_MESSAGES_PER_WINDOW) return;
 
   await prisma.chatMessage.create({
     data: { teamId, authorId: user.id, body },
@@ -23,8 +37,8 @@ export async function postChatMessage(teamId: string, formData: FormData) {
 export async function postAnnouncement(teamId: string, formData: FormData) {
   const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
 
-  const title = String(formData.get("title") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim().slice(0, 200);
+  const body = String(formData.get("body") ?? "").trim().slice(0, 5000);
   if (!title || !body) return;
 
   const announcement = await prisma.announcement.create({
@@ -60,11 +74,11 @@ export async function deleteAnnouncement(teamId: string, id: string) {
 export async function postHighlight(teamId: string, formData: FormData) {
   await requireMembership(teamId);
 
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim() || null;
+  const title = String(formData.get("title") ?? "").trim().slice(0, 200);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 2000) || null;
   const videoUrl = String(formData.get("videoUrl") ?? "").trim();
-  const playerId = String(formData.get("playerId") ?? "").trim() || null;
-  const eventId = String(formData.get("eventId") ?? "").trim() || null;
+  const playerIdRaw = String(formData.get("playerId") ?? "").trim() || null;
+  const eventIdRaw = String(formData.get("eventId") ?? "").trim() || null;
 
   if (!title || !videoUrl || !isSafeHttpUrl(videoUrl)) return;
 
@@ -77,11 +91,22 @@ export async function postHighlight(teamId: string, formData: FormData) {
     if (count >= FREE_HIGHLIGHT_LIMIT) return;
   }
 
+  // The <select>/hidden field only ever offer this team's own players and
+  // events, but never trust that alone — verify the tagged player/event
+  // actually belongs to this team before linking them, so a highlight can't
+  // be used to falsely tag an unrelated user or leak another team's event.
+  const [playerMembership, event] = await Promise.all([
+    playerIdRaw
+      ? prisma.teamMembership.findUnique({ where: { teamId_userId: { teamId, userId: playerIdRaw } } })
+      : null,
+    eventIdRaw ? prisma.event.findFirst({ where: { id: eventIdRaw, teamId } }) : null,
+  ]);
+
   await prisma.highlight.create({
     data: {
       teamId,
-      userId: playerId,
-      eventId,
+      userId: playerMembership ? playerIdRaw : null,
+      eventId: event ? eventIdRaw : null,
       title,
       description,
       videoUrl,

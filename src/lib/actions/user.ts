@@ -45,8 +45,8 @@ export async function signUp(
   _prevState: AuthFormState,
   formData: FormData
 ): Promise<AuthFormState> {
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 100);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const dobRaw = String(formData.get("dateOfBirth") ?? "");
@@ -59,6 +59,11 @@ export async function signUp(
   }
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters." };
+  }
+  // bcrypt silently truncates anything past 72 bytes; reject early instead
+  // of letting someone submit a huge string that only 72 bytes of it matter.
+  if (password.length > 200) {
+    return { error: "Password must be 200 characters or fewer." };
   }
   if (password !== confirmPassword) {
     return { error: "Passwords don't match." };
@@ -155,9 +160,9 @@ export async function updateProfile(
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const name = String(formData.get("name") ?? "").trim().slice(0, 100);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
+  const phone = String(formData.get("phone") ?? "").trim().slice(0, 30) || null;
   const photoUrlRaw = String(formData.get("photoUrl") ?? "").trim();
   const photoUrl = photoUrlRaw && isSafeHttpUrl(photoUrlRaw) ? photoUrlRaw : null;
 
@@ -199,6 +204,9 @@ export async function changePassword(
   }
   if (newPassword.length < 8) {
     return { error: "New password must be at least 8 characters." };
+  }
+  if (newPassword.length > 200) {
+    return { error: "New password must be 200 characters or fewer." };
   }
   if (newPassword !== confirmPassword) {
     return { error: "New passwords don't match." };

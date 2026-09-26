@@ -31,15 +31,14 @@ async function notifyGameResult(
 export async function createEvent(teamId: string, formData: FormData) {
   await requireRole(teamId, ["ADMIN", "COACH"]);
 
-  const type = String(formData.get("type") ?? "PRACTICE") as
-    | "PRACTICE"
-    | "GAME"
-    | "OTHER";
-  const title = String(formData.get("title") ?? "").trim();
+  const typeRaw = String(formData.get("type") ?? "PRACTICE");
+  const type: "PRACTICE" | "GAME" | "OTHER" =
+    typeRaw === "GAME" || typeRaw === "OTHER" ? typeRaw : "PRACTICE";
+  const title = String(formData.get("title") ?? "").trim().slice(0, 200);
   const startsAtRaw = String(formData.get("startsAt") ?? "");
-  const location = String(formData.get("location") ?? "").trim() || null;
-  const opponent = String(formData.get("opponent") ?? "").trim() || null;
-  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const location = String(formData.get("location") ?? "").trim().slice(0, 200) || null;
+  const opponent = String(formData.get("opponent") ?? "").trim().slice(0, 200) || null;
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 2000) || null;
   const repeat = String(formData.get("repeat") ?? "none");
 
   if (!title || !startsAtRaw) return;
@@ -132,7 +131,7 @@ export async function setRsvp(
   teamId: string,
   eventId: string,
   userId: string,
-  status: "IN" | "OUT" | "MAYBE"
+  status: "IN" | "OUT" | "MAYBE" | "PENDING"
 ) {
   const { user, membership } = await requireMembership(teamId);
   // Anyone can set their own RSVP; only an admin/coach may set it on behalf
@@ -171,10 +170,9 @@ export async function setRsvpForm(
   userId: string,
   formData: FormData
 ) {
-  const status = String(formData.get("status") ?? "PENDING") as
-    | "IN"
-    | "OUT"
-    | "MAYBE";
+  const statusRaw = String(formData.get("status") ?? "PENDING");
+  const status: "IN" | "OUT" | "MAYBE" | "PENDING" =
+    statusRaw === "IN" || statusRaw === "OUT" || statusRaw === "MAYBE" ? statusRaw : "PENDING";
   await setRsvp(teamId, eventId, userId, status);
 }
 
@@ -184,19 +182,21 @@ export async function setAttendanceForm(
   userId: string,
   formData: FormData
 ) {
-  const status = String(formData.get("status") ?? "UNKNOWN") as
-    | "PRESENT"
-    | "ABSENT"
-    | "LATE"
-    | "UNKNOWN";
+  const statusRaw = String(formData.get("status") ?? "UNKNOWN");
+  const status: "PRESENT" | "ABSENT" | "LATE" | "UNKNOWN" =
+    statusRaw === "PRESENT" || statusRaw === "ABSENT" || statusRaw === "LATE"
+      ? statusRaw
+      : "UNKNOWN";
   await setAttendance(teamId, eventId, userId, status);
 }
 
 export async function recordResult(teamId: string, eventId: string, formData: FormData) {
   await requireRole(teamId, ["ADMIN", "COACH"]);
 
-  const teamScore = Number(formData.get("teamScore") ?? 0);
-  const opponentScore = Number(formData.get("opponentScore") ?? 0);
+  const teamScoreRaw = Number(formData.get("teamScore") ?? 0);
+  const opponentScoreRaw = Number(formData.get("opponentScore") ?? 0);
+  const teamScore = Number.isFinite(teamScoreRaw) ? teamScoreRaw : 0;
+  const opponentScore = Number.isFinite(opponentScoreRaw) ? opponentScoreRaw : 0;
   const outcome =
     teamScore > opponentScore ? "WIN" : teamScore < opponentScore ? "LOSS" : "TIE";
 
@@ -246,6 +246,18 @@ export async function clearGameOutcome(teamId: string, eventId: string) {
 export async function recordStats(teamId: string, eventId: string, formData: FormData) {
   await requireRole(teamId, ["ADMIN", "COACH"]);
 
+  // The stat table only ever renders this team's own roster and stat
+  // categories, but the field names are still raw form input — verify each
+  // one actually belongs to this team before writing it, so a crafted
+  // request can't attach a stat to an unrelated user or pollute another
+  // team's stat definition.
+  const [members, statDefs] = await Promise.all([
+    prisma.teamMembership.findMany({ where: { teamId }, select: { userId: true } }),
+    prisma.statDefinition.findMany({ where: { teamId }, select: { id: true } }),
+  ]);
+  const memberIds = new Set(members.map((m) => m.userId));
+  const statDefIds = new Set(statDefs.map((s) => s.id));
+
   const entries = Array.from(formData.entries()).filter(([key]) =>
     key.startsWith("stat:")
   );
@@ -253,7 +265,8 @@ export async function recordStats(teamId: string, eventId: string, formData: For
   for (const [key, rawValue] of entries) {
     const [, userId, statDefinitionId] = key.split(":");
     const value = Number(rawValue);
-    if (!userId || !statDefinitionId || Number.isNaN(value)) continue;
+    if (!userId || !statDefinitionId || !Number.isFinite(value)) continue;
+    if (!memberIds.has(userId) || !statDefIds.has(statDefinitionId)) continue;
 
     if (value === 0) {
       await prisma.gameStat
@@ -280,7 +293,7 @@ export async function recordStats(teamId: string, eventId: string, formData: For
 export async function addStatDefinition(teamId: string, formData: FormData) {
   await requireRole(teamId, ["ADMIN", "COACH"]);
 
-  const name = String(formData.get("name") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   if (!name) return;
   await prisma.statDefinition
     .create({ data: { teamId, name } })

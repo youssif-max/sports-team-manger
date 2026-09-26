@@ -40,16 +40,19 @@ export async function createTeam(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const name = String(formData.get("name") ?? "").trim();
-  const sport = String(formData.get("sport") ?? "").trim();
-  const teamType = String(formData.get("teamType") ?? "OTHER") as
-    | "CLUB"
-    | "SCHOOL"
-    | "RECREATIONAL"
-    | "TRAVEL"
-    | "OTHER";
-  const season = String(formData.get("season") ?? "").trim() || null;
-  const colorPrimary = String(formData.get("colorPrimary") ?? "#1d4ed8");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 100);
+  const sport = String(formData.get("sport") ?? "").trim().slice(0, 60);
+  const teamTypeRaw = String(formData.get("teamType") ?? "OTHER");
+  const VALID_TEAM_TYPES = ["CLUB", "SCHOOL", "RECREATIONAL", "TRAVEL", "OTHER"] as const;
+  const teamType = (VALID_TEAM_TYPES as readonly string[]).includes(teamTypeRaw)
+    ? (teamTypeRaw as (typeof VALID_TEAM_TYPES)[number])
+    : "OTHER";
+  const season = String(formData.get("season") ?? "").trim().slice(0, 50) || null;
+  const colorPrimaryRaw = String(formData.get("colorPrimary") ?? "#1d4ed8");
+  // This gets interpolated directly into a CSS style string in the team
+  // header — an unvalidated value here would be a CSS-injection vector, not
+  // just an invalid color.
+  const colorPrimary = /^#[0-9a-fA-F]{6}$/.test(colorPrimaryRaw) ? colorPrimaryRaw : "#1d4ed8";
   if (!name || !sport) return;
 
   const joinCode = await uniqueJoinCode();
@@ -145,18 +148,23 @@ export async function updateMemberRole(
 export async function addNewPlayerToTeam(teamId: string, formData: FormData) {
   await requireRole(teamId, ["ADMIN", "COACH"]);
 
-  const name = String(formData.get("name") ?? "").trim();
-  const role = String(formData.get("role") ?? "PLAYER") as "COACH" | "PLAYER" | "PARENT";
-  const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim() || null;
-  const position = String(formData.get("position") ?? "").trim() || null;
+  const name = String(formData.get("name") ?? "").trim().slice(0, 100);
+  const roleRaw = String(formData.get("role") ?? "PLAYER");
+  // A coach can add players, but must never be able to grant ADMIN this way
+  // (the UI's <select> only ever offers these three, but a server action is
+  // a public endpoint — never trust that a raw request matches the form).
+  const role: "COACH" | "PLAYER" | "PARENT" =
+    roleRaw === "COACH" || roleRaw === "PARENT" ? roleRaw : "PLAYER";
+  const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim().slice(0, 10) || null;
+  const position = String(formData.get("position") ?? "").trim().slice(0, 60) || null;
   const photoUrlRaw = String(formData.get("photoUrl") ?? "").trim();
   const photoUrl = photoUrlRaw && isSafeHttpUrl(photoUrlRaw) ? photoUrlRaw : null;
-  const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200) || null;
+  const phone = String(formData.get("phone") ?? "").trim().slice(0, 30) || null;
   const emergencyContactName =
-    String(formData.get("emergencyContactName") ?? "").trim() || null;
+    String(formData.get("emergencyContactName") ?? "").trim().slice(0, 100) || null;
   const emergencyContactPhone =
-    String(formData.get("emergencyContactPhone") ?? "").trim() || null;
+    String(formData.get("emergencyContactPhone") ?? "").trim().slice(0, 30) || null;
 
   if (!name) return;
 
@@ -192,16 +200,16 @@ export async function updateMembership(
   const isPrivileged = membership.role === "ADMIN" || membership.role === "COACH";
   if (!isPrivileged && user.id !== userId) return;
 
-  const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim() || null;
-  const position = String(formData.get("position") ?? "").trim() || null;
+  const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim().slice(0, 10) || null;
+  const position = String(formData.get("position") ?? "").trim().slice(0, 60) || null;
   const photoUrlRaw = String(formData.get("photoUrl") ?? "").trim();
   const photoUrl = photoUrlRaw && isSafeHttpUrl(photoUrlRaw) ? photoUrlRaw : null;
-  const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200) || null;
+  const phone = String(formData.get("phone") ?? "").trim().slice(0, 30) || null;
   const emergencyContactName =
-    String(formData.get("emergencyContactName") ?? "").trim() || null;
+    String(formData.get("emergencyContactName") ?? "").trim().slice(0, 100) || null;
   const emergencyContactPhone =
-    String(formData.get("emergencyContactPhone") ?? "").trim() || null;
+    String(formData.get("emergencyContactPhone") ?? "").trim().slice(0, 30) || null;
 
   await prisma.teamMembership.update({
     where: { teamId_userId: { teamId, userId } },
@@ -241,8 +249,8 @@ export async function removeMembership(teamId: string, userId: string) {
 export async function updateTeamSettings(teamId: string, formData: FormData) {
   await requireRole(teamId, ["ADMIN"]);
 
-  const name = String(formData.get("name") ?? "").trim();
-  const season = String(formData.get("season") ?? "").trim() || null;
+  const name = String(formData.get("name") ?? "").trim().slice(0, 100);
+  const season = String(formData.get("season") ?? "").trim().slice(0, 50) || null;
   if (!name) return;
 
   const team = await prisma.team.findUniqueOrThrow({ where: { id: teamId } });

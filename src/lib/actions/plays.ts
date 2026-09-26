@@ -10,8 +10,8 @@ import { maxUploadBytesFor, dataUrlByteLength } from "@/lib/billing";
 export async function createPlay(teamId: string, formData: FormData) {
   const { user } = await requireMembership(teamId);
 
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim() || null;
+  const title = String(formData.get("title") ?? "").trim().slice(0, 200);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 2000) || null;
   const diagram = String(formData.get("diagram") ?? "").trim() || null;
   const thumbnail = String(formData.get("thumbnail") ?? "").trim() || null;
   const fileUrlRaw = String(formData.get("fileUrl") ?? "").trim();

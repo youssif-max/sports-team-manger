@@ -8,6 +8,13 @@ import { getStripeClient } from "@/lib/stripe";
 import { PREMIUM_PLANS, type PremiumPlan } from "@/lib/billing";
 
 async function originUrl(): Promise<string> {
+  // These redirect URLs control where a payment flow sends the admin back
+  // to — prefer Vercel's own trusted production-domain env var over the
+  // client-supplied Host header, which could otherwise be spoofed on a
+  // misconfigured or self-hosted deployment.
+  const prodUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (prodUrl) return `https://${prodUrl}`;
+
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
