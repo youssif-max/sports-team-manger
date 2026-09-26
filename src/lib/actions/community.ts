@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, requireMembership } from "@/lib/auth";
 import { sendPushToTeam } from "@/lib/actions/push";
+import { isSafeHttpUrl } from "@/lib/url";
 
 export async function postChatMessage(teamId: string, formData: FormData) {
   const { user } = await requireMembership(teamId);
@@ -64,7 +65,7 @@ export async function postHighlight(teamId: string, formData: FormData) {
   const playerId = String(formData.get("playerId") ?? "").trim() || null;
   const eventId = String(formData.get("eventId") ?? "").trim() || null;
 
-  if (!title || !videoUrl) return;
+  if (!title || !videoUrl || !isSafeHttpUrl(videoUrl)) return;
 
   await prisma.highlight.create({
     data: {

@@ -1,11 +1,19 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { createSessionCookie, clearCurrentUserSession } from "@/lib/auth";
+import {
+  createSessionCookie,
+  clearCurrentUserSession,
+  getCurrentUser,
+  getCurrentSessionToken,
+} from "@/lib/auth";
+import { isSafeHttpUrl } from "@/lib/url";
 
 export type AuthFormState = { error?: string } | undefined;
+export type AccountFormState = { error?: string; success?: boolean } | undefined;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -138,4 +146,110 @@ export async function signIn(
 export async function signOut() {
   await clearCurrentUserSession();
   redirect("/login");
+}
+
+export async function updateProfile(
+  _prevState: AccountFormState,
+  formData: FormData
+): Promise<AccountFormState> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const photoUrlRaw = String(formData.get("photoUrl") ?? "").trim();
+  const photoUrl = photoUrlRaw && isSafeHttpUrl(photoUrlRaw) ? photoUrlRaw : null;
+
+  if (!name) return { error: "Name can't be empty." };
+  if (!email || !EMAIL_PATTERN.test(email)) {
+    return { error: "Enter a valid email address." };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { name, email, phone, photoUrl },
+    });
+  } catch (err) {
+    if ((err as { code?: string }).code === "P2002") {
+      return { error: "That email is already in use by another account." };
+    }
+    throw err;
+  }
+
+  revalidatePath("/account");
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+export async function changePassword(
+  _prevState: AccountFormState,
+  formData: FormData
+): Promise<AccountFormState> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const currentPassword = String(formData.get("currentPassword") ?? "");
+  const newPassword = String(formData.get("newPassword") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return { error: "Please fill in all fields." };
+  }
+  if (newPassword.length < 8) {
+    return { error: "New password must be at least 8 characters." };
+  }
+  if (newPassword !== confirmPassword) {
+    return { error: "New passwords don't match." };
+  }
+
+  const valid = user.passwordHash && (await bcrypt.compare(currentPassword, user.passwordHash));
+  if (!valid) {
+    return { error: "Current password is incorrect." };
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const currentToken = await getCurrentSessionToken();
+
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
+    // Signing out every other session is a deliberate side effect: if
+    // someone else had a stolen session token, changing the password now
+    // revokes it too, instead of leaving it valid for another 30 days.
+    prisma.session.deleteMany({
+      where: { userId: user.id, token: { not: currentToken ?? "" } },
+    }),
+  ]);
+
+  return { success: true };
+}
+
+export async function deleteMyAccount(
+  _prevState: AccountFormState,
+  formData: FormData
+): Promise<AccountFormState> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const password = String(formData.get("password") ?? "");
+  if (!password) return { error: "Enter your password to confirm." };
+
+  const valid = user.passwordHash && (await bcrypt.compare(password, user.passwordHash));
+  if (!valid) return { error: "Incorrect password." };
+
+  const adminTeams = await prisma.team.findMany({
+    where: { memberships: { some: { userId: user.id, role: "ADMIN" } } },
+    include: { _count: { select: { memberships: { where: { role: "ADMIN" } } } } },
+  });
+  const stuckTeam = adminTeams.find((t) => t._count.memberships <= 1);
+  if (stuckTeam) {
+    return {
+      error: `You're the only admin on "${stuckTeam.name}". Promote another member to admin there before deleting your account.`,
+    };
+  }
+
+  await prisma.user.delete({ where: { id: user.id } });
+  await clearCurrentUserSession();
+  redirect("/signup");
 }

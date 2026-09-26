@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
-import { Avatar } from "@/components/Avatar";
+import { UserPlus } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { signOut } from "@/lib/actions/user";
+import { UserMenu } from "@/components/UserMenu";
 import type { User } from "@prisma/client";
 
 export function TopBar({ user }: { user: User }) {
@@ -12,20 +11,16 @@ export function TopBar({ user }: { user: User }) {
         <Link href="/">
           <Logo />
         </Link>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Avatar name={user.name} photoUrl={user.photoUrl} size={28} />
-            <span className="hidden text-sm font-medium sm:inline">{user.name}</span>
-          </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
-            >
-              <LogOut size={14} />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
-          </form>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/join"
+            title="Join a team"
+            className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          >
+            <UserPlus size={14} />
+            <span className="hidden sm:inline">Join a Team</span>
+          </Link>
+          <UserMenu user={user} />
         </div>
       </div>
     </header>

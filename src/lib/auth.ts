@@ -54,6 +54,11 @@ export async function clearCurrentUserSession() {
   store.delete(COOKIE_NAME);
 }
 
+export async function getCurrentSessionToken() {
+  const store = await cookies();
+  return store.get(COOKIE_NAME)?.value ?? null;
+}
+
 export async function getMembership(teamId: string, userId: string) {
   return prisma.teamMembership.findUnique({
     where: { teamId_userId: { teamId, userId } },

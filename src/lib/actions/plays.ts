@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireMembership } from "@/lib/auth";
+import { isSafeHttpUrl } from "@/lib/url";
 
 export async function createPlay(teamId: string, formData: FormData) {
   const { user } = await requireMembership(teamId);
@@ -12,7 +13,8 @@ export async function createPlay(teamId: string, formData: FormData) {
   const description = String(formData.get("description") ?? "").trim() || null;
   const diagram = String(formData.get("diagram") ?? "").trim() || null;
   const thumbnail = String(formData.get("thumbnail") ?? "").trim() || null;
-  const fileUrl = String(formData.get("fileUrl") ?? "").trim() || null;
+  const fileUrlRaw = String(formData.get("fileUrl") ?? "").trim();
+  const fileUrl = fileUrlRaw && isSafeHttpUrl(fileUrlRaw) ? fileUrlRaw : null;
 
   if (!title || (!diagram && !fileUrl)) return;
 

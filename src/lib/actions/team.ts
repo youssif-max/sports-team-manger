@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership, requireRole, requireMembership } from "@/lib/auth";
+import { isSafeHttpUrl } from "@/lib/url";
 
 const DEFAULT_STATS: Record<string, string[]> = {
   soccer: ["Goals", "Assists", "Saves"],
@@ -147,7 +148,8 @@ export async function addNewPlayerToTeam(teamId: string, formData: FormData) {
   const role = String(formData.get("role") ?? "PLAYER") as "COACH" | "PLAYER" | "PARENT";
   const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim() || null;
   const position = String(formData.get("position") ?? "").trim() || null;
-  const photoUrl = String(formData.get("photoUrl") ?? "").trim() || null;
+  const photoUrlRaw = String(formData.get("photoUrl") ?? "").trim();
+  const photoUrl = photoUrlRaw && isSafeHttpUrl(photoUrlRaw) ? photoUrlRaw : null;
   const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const emergencyContactName =
@@ -191,7 +193,8 @@ export async function updateMembership(
 
   const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim() || null;
   const position = String(formData.get("position") ?? "").trim() || null;
-  const photoUrl = String(formData.get("photoUrl") ?? "").trim() || null;
+  const photoUrlRaw = String(formData.get("photoUrl") ?? "").trim();
+  const photoUrl = photoUrlRaw && isSafeHttpUrl(photoUrlRaw) ? photoUrlRaw : null;
   const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const emergencyContactName =

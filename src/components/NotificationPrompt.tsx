@@ -13,7 +13,7 @@ function urlBase64ToUint8Array(base64String: string) {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
-async function resubscribeSilently() {
+export async function resubscribeSilently() {
   try {
     const registration = await navigator.serviceWorker.ready;
     let sub = await registration.pushManager.getSubscription();

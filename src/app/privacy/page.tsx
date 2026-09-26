@@ -90,8 +90,11 @@ export default function PrivacyPolicyPage() {
       <LegalSection heading="5. Data Retention & Deletion">
         <p>
           We keep your information for as long as your account or team membership is active.
-          Removing a roster entry deletes that entry&apos;s team-specific data. To request full
-          deletion of an account or all data associated with you, contact us at the email below.
+          Removing a roster entry deletes that entry&apos;s team-specific data. You can permanently
+          delete your own account at any time from Account Settings — this immediately removes
+          your login, roster entries, chat messages, announcements, and stats. If you&apos;re the
+          only admin on a team, you&apos;ll need to promote someone else first so the team isn&apos;t
+          left without one. You can also contact us at the email below for help with deletion.
         </p>
       </LegalSection>
 
@@ -108,7 +111,7 @@ export default function PrivacyPolicyPage() {
         <ul className="list-disc pl-5">
           <li>Update or remove your contact info from your Roster profile at any time.</li>
           <li>Turn push notifications off from your device&apos;s notification settings.</li>
-          <li>Ask a team admin to remove you from a team, or contact us to delete your account entirely.</li>
+          <li>Ask a team admin to remove you from a team, or delete your account yourself from Account Settings.</li>
         </ul>
       </LegalSection>
 
