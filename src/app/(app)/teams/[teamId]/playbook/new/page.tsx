@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { NewPlayForm } from "@/components/NewPlayForm";
+import { maxUploadBytesFor } from "@/lib/billing";
 
 export default async function NewPlayPage({
   params,
@@ -14,7 +15,7 @@ export default async function NewPlayPage({
   return (
     <div className="mx-auto w-full max-w-2xl">
       <h1 className="mb-4 text-xl font-bold">New Play</h1>
-      <NewPlayForm teamId={teamId} sport={team.sport} />
+      <NewPlayForm teamId={teamId} sport={team.sport} maxFileBytes={maxUploadBytesFor(team)} />
     </div>
   );
 }

@@ -7,9 +7,16 @@ import { resizeImageFile, fileToDataUrl } from "@/lib/resizeImage";
 
 type Mode = "draw" | "upload" | "link";
 
-const MAX_FILE_BYTES = 6 * 1024 * 1024;
-
-export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }) {
+export function NewPlayForm({
+  teamId,
+  sport,
+  maxFileBytes,
+}: {
+  teamId: string;
+  sport: string;
+  maxFileBytes: number;
+}) {
+  const maxFileMb = Math.round(maxFileBytes / (1024 * 1024));
   const canvasRef = useRef<PlayCanvasHandle>(null);
   const diagramInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -37,8 +44,8 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_FILE_BYTES) {
-      setError("That file is too large (max 6MB). Try a smaller file or use a link instead.");
+    if (file.size > maxFileBytes) {
+      setError(`That file is too large (max ${maxFileMb}MB). Try a smaller file or use a link instead.`);
       return;
     }
 
@@ -142,7 +149,7 @@ export function NewPlayForm({ teamId, sport }: { teamId: string; sport: string }
             className="text-sm text-neutral-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-700"
           />
           <p className="text-xs text-neutral-400">
-            Any file up to 6MB — photos, screenshots, or PDFs.
+            Any file up to {maxFileMb}MB — photos, screenshots, or PDFs.
           </p>
           {processing && <p className="text-xs text-neutral-500">Processing file...</p>}
           {error && <p className="text-xs font-medium text-red-600">{error}</p>}

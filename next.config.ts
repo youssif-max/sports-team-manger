@@ -17,7 +17,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "8mb",
+      // Must be >= the largest per-team upload ceiling (see PREMIUM_UPLOAD_MAX_BYTES
+      // in src/lib/billing.ts) plus base64 + form overhead; the actual per-team
+      // limit is enforced inside the server actions themselves.
+      bodySizeLimit: "30mb",
     },
   },
   async headers() {

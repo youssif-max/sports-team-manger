@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership, requireRole, requireMembership } from "@/lib/auth";
 import { isSafeHttpUrl } from "@/lib/url";
+import { isTeamPremium } from "@/lib/billing";
 
 const DEFAULT_STATS: Record<string, string[]> = {
   soccer: ["Goals", "Assists", "Saves"],
@@ -235,4 +236,38 @@ export async function removeMembership(teamId: string, userId: string) {
   });
   revalidatePath(`/teams/${teamId}/roster`);
   redirect(`/teams/${teamId}/roster`);
+}
+
+export async function updateTeamSettings(teamId: string, formData: FormData) {
+  await requireRole(teamId, ["ADMIN"]);
+
+  const name = String(formData.get("name") ?? "").trim();
+  const season = String(formData.get("season") ?? "").trim() || null;
+  if (!name) return;
+
+  const team = await prisma.team.findUniqueOrThrow({ where: { id: teamId } });
+  const data: {
+    name: string;
+    season: string | null;
+    colorPrimary?: string;
+    colorSecondary?: string;
+    logoUrl?: string | null;
+  } = { name, season };
+
+  // Custom branding (colors beyond the creation-time preset, and a logo) is
+  // a Premium perk — silently ignore attempts to change it on a free team
+  // rather than trusting a hidden/tampered form field.
+  if (isTeamPremium(team)) {
+    const colorPrimary = String(formData.get("colorPrimary") ?? "").trim();
+    const colorSecondary = String(formData.get("colorSecondary") ?? "").trim();
+    const logoUrlRaw = String(formData.get("logoUrl") ?? "").trim();
+
+    if (/^#[0-9a-fA-F]{6}$/.test(colorPrimary)) data.colorPrimary = colorPrimary;
+    if (/^#[0-9a-fA-F]{6}$/.test(colorSecondary)) data.colorSecondary = colorSecondary;
+    data.logoUrl = logoUrlRaw && isSafeHttpUrl(logoUrlRaw) ? logoUrlRaw : null;
+  }
+
+  await prisma.team.update({ where: { id: teamId }, data });
+  revalidatePath(`/teams/${teamId}/settings`);
+  revalidatePath(`/teams/${teamId}`, "layout");
 }

@@ -34,6 +34,13 @@ model Team {
   highlights     Highlight[]
   statDefinitions StatDefinition[]
   plays          Play[]
+
+  // Premium subscription (billed to the whole team, managed via Stripe)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  subscriptionStatus   String?
+  currentPeriodEnd     DateTime?
 }
 
 model User {

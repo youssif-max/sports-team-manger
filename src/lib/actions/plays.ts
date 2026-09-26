@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireMembership } from "@/lib/auth";
 import { isSafeHttpUrl } from "@/lib/url";
+import { maxUploadBytesFor, dataUrlByteLength } from "@/lib/billing";
 
 export async function createPlay(teamId: string, formData: FormData) {
   const { user } = await requireMembership(teamId);
@@ -17,6 +18,12 @@ export async function createPlay(teamId: string, formData: FormData) {
   const fileUrl = fileUrlRaw && isSafeHttpUrl(fileUrlRaw) ? fileUrlRaw : null;
 
   if (!title || (!diagram && !fileUrl)) return;
+
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) return;
+  const maxBytes = maxUploadBytesFor(team);
+  if (diagram?.startsWith("data:") && dataUrlByteLength(diagram) > maxBytes) return;
+  if (thumbnail?.startsWith("data:") && dataUrlByteLength(thumbnail) > maxBytes) return;
 
   await prisma.play.create({
     data: { teamId, title, description, diagram, thumbnail, fileUrl, createdById: user.id },

@@ -43,6 +43,12 @@ export default function PrivacyPolicyPage() {
           (Neon) automatically log standard request data (such as IP address and timestamps) as
           part of running the service and keeping it secure.
         </p>
+        <p>
+          <strong>Billing data</strong>: if a team subscribes to Premium, payment is handled
+          entirely by Stripe. We never see or store your card number — we only keep the
+          subscription&apos;s status and renewal date so we know which teams have Premium
+          features unlocked.
+        </p>
       </LegalSection>
 
       <LegalSection heading="2. How We Use Information">
@@ -117,9 +123,10 @@ export default function PrivacyPolicyPage() {
 
       <LegalSection heading="8. Third-Party Services">
         <p>
-          SportSync runs on Vercel (hosting) and Neon (database). These providers process data on
-          our behalf under their own security and privacy commitments; we don&apos;t use any
-          third-party advertising or analytics services.
+          SportSync runs on Vercel (hosting) and Neon (database), and uses Stripe to process
+          Premium subscription payments. These providers process data on our behalf under their
+          own security and privacy commitments; we don&apos;t use any third-party advertising or
+          analytics services.
         </p>
       </LegalSection>
 

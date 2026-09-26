@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole, requireMembership } from "@/lib/auth";
 import { sendPushToTeam } from "@/lib/actions/push";
 import { isSafeHttpUrl } from "@/lib/url";
+import { isTeamPremium, FREE_HIGHLIGHT_LIMIT } from "@/lib/billing";
 
 export async function postChatMessage(teamId: string, formData: FormData) {
   const { user } = await requireMembership(teamId);
@@ -66,6 +67,15 @@ export async function postHighlight(teamId: string, formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "").trim() || null;
 
   if (!title || !videoUrl || !isSafeHttpUrl(videoUrl)) return;
+
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) return;
+  if (!isTeamPremium(team)) {
+    const count = await prisma.highlight.count({ where: { teamId } });
+    // Defense in depth: the UI already hides the form once the free cap is
+    // hit, but never trust that alone — this is a public server action.
+    if (count >= FREE_HIGHLIGHT_LIMIT) return;
+  }
 
   await prisma.highlight.create({
     data: {

@@ -66,32 +66,61 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection heading="7. Disclaimer of Warranties">
+      <LegalSection heading="7. Premium Subscriptions & Billing">
+        <p>
+          SportSync offers an optional Premium plan, billed per team, with monthly and yearly
+          pricing shown on the team&apos;s Premium page before you subscribe. Only a team admin can
+          start or manage a subscription. Payments are processed by Stripe — we never see or store
+          your card number.
+        </p>
+        <p>
+          <strong>Auto-renewal:</strong> Premium subscriptions renew automatically at the end of
+          each billing period (monthly or yearly, matching what you signed up for) until canceled.
+        </p>
+        <p>
+          <strong>Cancellation:</strong> A team admin can cancel anytime from the &quot;Manage
+          Billing&quot; button on the team&apos;s Premium page, which opens Stripe&apos;s secure
+          billing portal. Canceling stops future renewals; Premium features remain available
+          through the end of the period you already paid for.
+        </p>
+        <p>
+          <strong>Refunds:</strong> Charges are generally non-refundable, including for partial
+          billing periods, except where required by law or at our discretion. Contact us at the
+          email below if something went wrong with a charge.
+        </p>
+        <p>
+          <strong>Price changes:</strong> If we change Premium pricing, we&apos;ll give existing
+          subscribers notice before it applies to their next renewal.
+        </p>
+      </LegalSection>
+
+      <LegalSection heading="8. Disclaimer of Warranties">
         <p>
           SportSync is provided &quot;as is&quot; without warranties of any kind. We don&apos;t
           guarantee the service will be uninterrupted, error-free, or suitable for every use.
         </p>
       </LegalSection>
 
-      <LegalSection heading="8. Limitation of Liability">
+      <LegalSection heading="9. Limitation of Liability">
         <p>
           To the fullest extent permitted by law, SportSync and its operator aren&apos;t liable for
           indirect, incidental, or consequential damages arising from your use of the service.
         </p>
       </LegalSection>
 
-      <LegalSection heading="9. Termination">
+      <LegalSection heading="10. Termination">
         <p>
           We may suspend or terminate access for accounts that violate these terms or misuse the
-          service.
+          service. If a team&apos;s account is terminated while it has an active Premium
+          subscription, we&apos;ll cancel that subscription rather than continue billing it.
         </p>
       </LegalSection>
 
-      <LegalSection heading="10. Changes">
+      <LegalSection heading="11. Changes">
         <p>We may update these terms from time to time. Continued use after a change means you accept the updated terms.</p>
       </LegalSection>
 
-      <LegalSection heading="11. Contact">
+      <LegalSection heading="12. Contact">
         <p>
           Questions about these terms? Contact{" "}
           <a href="mailto:rennewiyoussif@sellabroad.io" className="text-brand-600 hover:underline">

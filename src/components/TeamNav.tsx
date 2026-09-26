@@ -9,6 +9,8 @@ import {
   MessageCircle,
   Clapperboard,
   ClipboardList,
+  Sparkles,
+  BarChart3,
 } from "lucide-react";
 
 const TABS = [
@@ -17,10 +19,12 @@ const TABS = [
   { href: "/schedule", label: "Schedule", Icon: Calendar },
   { href: "/gamedays", label: "Game Days", Icon: CalendarCheck },
   { href: "/standings", label: "Standings", Icon: Trophy },
+  { href: "/analytics", label: "Analytics", Icon: BarChart3 },
   { href: "/playbook", label: "Playbook", Icon: ClipboardList },
   { href: "/announcements", label: "Announcements", Icon: Megaphone },
   { href: "/chat", label: "Chat", Icon: MessageCircle },
   { href: "/highlights", label: "Highlights", Icon: Clapperboard },
+  { href: "/premium", label: "Premium", Icon: Sparkles },
 ];
 
 export function TeamNav({ teamId }: { teamId: string }) {
