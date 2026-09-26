@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { AutoSubmitSelect } from "@/components/AutoSubmitSelect";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -61,6 +61,9 @@ export default async function EventDetailPage({
   const statByKey = new Map(stats.map((s) => [`${s.userId}:${s.statDefinitionId}`, s.value]));
 
   const myRsvp = user ? rsvpByUser.get(user.id) : null;
+  const myMembership = user ? await getMembership(teamId, user.id) : null;
+  const isPrivileged =
+    myMembership?.role === "ADMIN" || myMembership?.role === "COACH";
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,26 +84,28 @@ export default async function EventDetailPage({
           )}
           {event.notes && <p className="mt-2 text-sm">{event.notes}</p>}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <form action={deleteEvent.bind(null, teamId, eventId)}>
-            <ConfirmButton
-              confirmText="Delete this event? This cannot be undone."
-              className="text-xs font-medium text-red-600 hover:underline"
-            >
-              Delete event
-            </ConfirmButton>
-          </form>
-          {event.recurringGroupId && (
-            <form action={deleteEventSeries.bind(null, teamId, event.recurringGroupId)}>
+        {isPrivileged && (
+          <div className="flex flex-col items-end gap-1">
+            <form action={deleteEvent.bind(null, teamId, eventId)}>
               <ConfirmButton
-                confirmText="Delete this whole recurring series? Every practice in this series will be removed. This cannot be undone."
+                confirmText="Delete this event? This cannot be undone."
                 className="text-xs font-medium text-red-600 hover:underline"
               >
-                Delete series
+                Delete event
               </ConfirmButton>
             </form>
-          )}
-        </div>
+            {event.recurringGroupId && (
+              <form action={deleteEventSeries.bind(null, teamId, event.recurringGroupId)}>
+                <ConfirmButton
+                  confirmText="Delete this whole recurring series? Every practice in this series will be removed. This cannot be undone."
+                  className="text-xs font-medium text-red-600 hover:underline"
+                >
+                  Delete series
+                </ConfirmButton>
+              </form>
+            )}
+          </div>
+        )}
       </div>
 
       {user && (
@@ -121,56 +126,70 @@ export default async function EventDetailPage({
       {event.type === "GAME" && (
         <section className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
           <h2 className="mb-3 text-sm font-semibold uppercase text-neutral-400">Result</h2>
-          <form
-            action={recordResult.bind(null, teamId, eventId)}
-            className="flex flex-wrap items-end gap-3"
-          >
-            <label className="text-sm font-medium">
-              Us
-              <input
-                type="number"
-                name="teamScore"
-                defaultValue={result?.teamScore ?? 0}
-                className="mt-1 w-20 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-              />
-            </label>
-            <label className="text-sm font-medium">
-              {event.opponent || "Opponent"}
-              <input
-                type="number"
-                name="opponentScore"
-                defaultValue={result?.opponentScore ?? 0}
-                className="mt-1 w-20 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-              />
-            </label>
-            <button
-              type="submit"
-              className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-            >
-              Save Result
-            </button>
-            {result && (
-              <span className="text-sm font-semibold">Current: {result.outcome}</span>
-            )}
-          </form>
 
-          <div className="mt-3 flex items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-            <span className="text-xs text-neutral-500">Or just log the result:</span>
-            {(["WIN", "LOSS", "TIE"] as const).map((o) => (
-              <form key={o} action={setGameOutcome.bind(null, teamId, eventId, o)}>
+          {isPrivileged ? (
+            <>
+              <form
+                action={recordResult.bind(null, teamId, eventId)}
+                className="flex flex-wrap items-end gap-3"
+              >
+                <label className="text-sm font-medium">
+                  Us
+                  <input
+                    type="number"
+                    name="teamScore"
+                    defaultValue={result?.teamScore ?? 0}
+                    className="mt-1 w-20 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  />
+                </label>
+                <label className="text-sm font-medium">
+                  {event.opponent || "Opponent"}
+                  <input
+                    type="number"
+                    name="opponentScore"
+                    defaultValue={result?.opponentScore ?? 0}
+                    className="mt-1 w-20 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  />
+                </label>
                 <button
                   type="submit"
-                  className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                    result?.outcome === o
-                      ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
-                      : "border border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                  }`}
+                  className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
                 >
-                  {o === "WIN" ? "Win" : o === "LOSS" ? "Loss" : "Tie"}
+                  Save Result
                 </button>
+                {result && (
+                  <span className="text-sm font-semibold">Current: {result.outcome}</span>
+                )}
               </form>
-            ))}
-          </div>
+
+              <div className="mt-3 flex items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <span className="text-xs text-neutral-500">Or just log the result:</span>
+                {(["WIN", "LOSS", "TIE"] as const).map((o) => (
+                  <form key={o} action={setGameOutcome.bind(null, teamId, eventId, o)}>
+                    <button
+                      type="submit"
+                      className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+                        result?.outcome === o
+                          ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
+                          : "border border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                      }`}
+                    >
+                      {o === "WIN" ? "Win" : o === "LOSS" ? "Loss" : "Tie"}
+                    </button>
+                  </form>
+                ))}
+              </div>
+            </>
+          ) : result ? (
+            <p className="text-sm font-semibold">
+              {result.outcome}
+              {result.teamScore !== null && result.opponentScore !== null
+                ? ` · ${result.teamScore}-${result.opponentScore}`
+                : ""}
+            </p>
+          ) : (
+            <p className="text-sm text-neutral-400">Not played yet.</p>
+          )}
         </section>
       )}
 
@@ -189,13 +208,19 @@ export default async function EventDetailPage({
                 <span className="text-xs text-neutral-400">
                   RSVP: {rsvpByUser.get(m.userId)?.status ?? "PENDING"}
                 </span>
-                <AutoSubmitSelect
-                  name="status"
-                  defaultValue={attendanceByUser.get(m.userId)?.status ?? "UNKNOWN"}
-                  options={ATTENDANCE_OPTIONS}
-                  action={setAttendanceForm.bind(null, teamId, eventId, m.userId)}
-                  className="rounded-lg border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
-                />
+                {isPrivileged ? (
+                  <AutoSubmitSelect
+                    name="status"
+                    defaultValue={attendanceByUser.get(m.userId)?.status ?? "UNKNOWN"}
+                    options={ATTENDANCE_OPTIONS}
+                    action={setAttendanceForm.bind(null, teamId, eventId, m.userId)}
+                    className="rounded-lg border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+                  />
+                ) : (
+                  <span className="text-xs font-medium text-neutral-500">
+                    {attendanceByUser.get(m.userId)?.status ?? "UNKNOWN"}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -207,7 +232,48 @@ export default async function EventDetailPage({
           <h2 className="mb-3 text-sm font-semibold uppercase text-neutral-400">
             Game Stats
           </h2>
-          <form action={recordStats.bind(null, teamId, eventId)} className="flex flex-col gap-3">
+          {isPrivileged ? (
+            <form action={recordStats.bind(null, teamId, eventId)} className="flex flex-col gap-3">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-max text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-neutral-400">
+                      <th className="pb-2 pr-4">Player</th>
+                      {statDefs.map((sd) => (
+                        <th key={sd.id} className="pb-2 pr-4">
+                          {sd.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={m.id} className="border-t border-neutral-100 dark:border-neutral-800">
+                        <td className="py-2 pr-4 font-medium">{m.user.name}</td>
+                        {statDefs.map((sd) => (
+                          <td key={sd.id} className="py-2 pr-4">
+                            <input
+                              type="number"
+                              step="1"
+                              name={`stat:${m.userId}:${sd.id}`}
+                              defaultValue={statByKey.get(`${m.userId}:${sd.id}`) ?? 0}
+                              className="w-16 rounded-lg border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button
+                type="submit"
+                className="self-start rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+              >
+                Save Stats
+              </button>
+            </form>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-max text-sm">
                 <thead>
@@ -226,13 +292,7 @@ export default async function EventDetailPage({
                       <td className="py-2 pr-4 font-medium">{m.user.name}</td>
                       {statDefs.map((sd) => (
                         <td key={sd.id} className="py-2 pr-4">
-                          <input
-                            type="number"
-                            step="1"
-                            name={`stat:${m.userId}:${sd.id}`}
-                            defaultValue={statByKey.get(`${m.userId}:${sd.id}`) ?? 0}
-                            className="w-16 rounded-lg border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                          />
+                          {statByKey.get(`${m.userId}:${sd.id}`) ?? 0}
                         </td>
                       ))}
                     </tr>
@@ -240,13 +300,7 @@ export default async function EventDetailPage({
                 </tbody>
               </table>
             </div>
-            <button
-              type="submit"
-              className="self-start rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-            >
-              Save Stats
-            </button>
-          </form>
+          )}
         </section>
       )}
     </div>

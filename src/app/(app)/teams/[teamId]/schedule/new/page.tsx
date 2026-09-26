@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { createEvent } from "@/lib/actions/schedule";
 import { toDatetimeLocalValue, hoursFromNow } from "@/lib/format";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 
 const DAYS = [
   { value: 0, label: "S" },
@@ -17,6 +19,13 @@ export default async function NewEventPage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+
+  const user = await getCurrentUser();
+  const membership = user ? await getMembership(teamId, user.id) : null;
+  if (!membership || (membership.role !== "ADMIN" && membership.role !== "COACH")) {
+    redirect(`/teams/${teamId}/schedule`);
+  }
+
   const action = createEvent.bind(null, teamId);
 
   const in1Hour = hoursFromNow(1);

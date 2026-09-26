@@ -3,7 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { postAnnouncement, deleteAnnouncement } from "@/lib/actions/community";
 import { formatDateTime } from "@/lib/format";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 
 export default async function AnnouncementsPage({
   params,
@@ -20,34 +20,39 @@ export default async function AnnouncementsPage({
     getCurrentUser(),
   ]);
 
+  const membership = user ? await getMembership(teamId, user.id) : null;
+  const isPrivileged = membership?.role === "ADMIN" || membership?.role === "COACH";
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <h1 className="text-xl font-bold">Announcements</h1>
 
-      <form
-        action={postAnnouncement.bind(null, teamId)}
-        className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
-      >
-        <input
-          name="title"
-          required
-          placeholder="Title"
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-        />
-        <textarea
-          name="body"
-          required
-          rows={3}
-          placeholder="Write an announcement for the team..."
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-        />
-        <button
-          type="submit"
-          className="self-start rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+      {isPrivileged && (
+        <form
+          action={postAnnouncement.bind(null, teamId)}
+          className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
         >
-          Post
-        </button>
-      </form>
+          <input
+            name="title"
+            required
+            placeholder="Title"
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+          />
+          <textarea
+            name="body"
+            required
+            rows={3}
+            placeholder="Write an announcement for the team..."
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+          />
+          <button
+            type="submit"
+            className="self-start rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+          >
+            Post
+          </button>
+        </form>
+      )}
 
       <div className="flex flex-col gap-3">
         {announcements.length === 0 && (
@@ -68,7 +73,7 @@ export default async function AnnouncementsPage({
                   </p>
                 </div>
               </div>
-              {user?.id === a.authorId && (
+              {(isPrivileged || user?.id === a.authorId) && (
                 <form action={deleteAnnouncement.bind(null, teamId, a.id)}>
                   <ConfirmButton
                     confirmText="Delete this announcement?"

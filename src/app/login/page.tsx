@@ -63,6 +63,18 @@ export default function LoginPage() {
           Sign up
         </Link>
       </p>
+
+      <p className="flex justify-center gap-3 text-center text-xs text-neutral-400">
+        <Link href="/privacy" className="hover:underline">
+          Privacy
+        </Link>
+        <Link href="/terms" className="hover:underline">
+          Terms
+        </Link>
+        <Link href="/cookies" className="hover:underline">
+          Cookies
+        </Link>
+      </p>
     </main>
   );
 }

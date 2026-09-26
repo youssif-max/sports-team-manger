@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { setGameOutcome, clearGameOutcome } from "@/lib/actions/schedule";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 
 export default async function GameDaysPage({
   params,
@@ -10,11 +11,17 @@ export default async function GameDaysPage({
 }) {
   const { teamId } = await params;
 
-  const games = await prisma.event.findMany({
-    where: { teamId, type: "GAME" },
-    include: { result: true },
-    orderBy: { startsAt: "desc" },
-  });
+  const [games, user] = await Promise.all([
+    prisma.event.findMany({
+      where: { teamId, type: "GAME" },
+      include: { result: true },
+      orderBy: { startsAt: "desc" },
+    }),
+    getCurrentUser(),
+  ]);
+
+  const membership = user ? await getMembership(teamId, user.id) : null;
+  const isPrivileged = membership?.role === "ADMIN" || membership?.role === "COACH";
 
   const record = games.reduce(
     (acc, g) => {
@@ -60,34 +67,52 @@ export default async function GameDaysPage({
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
-                {(["WIN", "LOSS", "TIE"] as const).map((o) => (
-                  <form key={o} action={setGameOutcome.bind(null, teamId, g.id, o)}>
-                    <button
-                      type="submit"
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                        g.result?.outcome === o
-                          ? o === "WIN"
-                            ? "bg-green-600 text-white"
-                            : o === "LOSS"
-                            ? "bg-red-600 text-white"
-                            : "bg-neutral-600 text-white"
-                          : "border border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                      }`}
-                    >
-                      {o === "WIN" ? "Win" : o === "LOSS" ? "Loss" : "Tie"}
-                    </button>
-                  </form>
-                ))}
-                {g.result && (
-                  <form action={clearGameOutcome.bind(null, teamId, g.id)}>
-                    <button
-                      type="submit"
-                      className="rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-                      title="Clear result"
-                    >
-                      Clear
-                    </button>
-                  </form>
+                {isPrivileged ? (
+                  <>
+                    {(["WIN", "LOSS", "TIE"] as const).map((o) => (
+                      <form key={o} action={setGameOutcome.bind(null, teamId, g.id, o)}>
+                        <button
+                          type="submit"
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                            g.result?.outcome === o
+                              ? o === "WIN"
+                                ? "bg-green-600 text-white"
+                                : o === "LOSS"
+                                ? "bg-red-600 text-white"
+                                : "bg-neutral-600 text-white"
+                              : "border border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                          }`}
+                        >
+                          {o === "WIN" ? "Win" : o === "LOSS" ? "Loss" : "Tie"}
+                        </button>
+                      </form>
+                    ))}
+                    {g.result && (
+                      <form action={clearGameOutcome.bind(null, teamId, g.id)}>
+                        <button
+                          type="submit"
+                          className="rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                          title="Clear result"
+                        >
+                          Clear
+                        </button>
+                      </form>
+                    )}
+                  </>
+                ) : g.result ? (
+                  <span
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      g.result.outcome === "WIN"
+                        ? "bg-green-600 text-white"
+                        : g.result.outcome === "LOSS"
+                        ? "bg-red-600 text-white"
+                        : "bg-neutral-600 text-white"
+                    }`}
+                  >
+                    {g.result.outcome === "WIN" ? "Win" : g.result.outcome === "LOSS" ? "Loss" : "Tie"}
+                  </span>
+                ) : (
+                  <span className="text-xs text-neutral-400">Not played yet</span>
                 )}
               </div>
             </div>

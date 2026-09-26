@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { setGameOutcome } from "@/lib/actions/schedule";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 
 export default async function StandingsPage({
   params,
@@ -10,11 +11,17 @@ export default async function StandingsPage({
 }) {
   const { teamId } = await params;
 
-  const results = await prisma.gameResult.findMany({
-    where: { event: { teamId } },
-    include: { event: true },
-    orderBy: { event: { startsAt: "desc" } },
-  });
+  const [results, user] = await Promise.all([
+    prisma.gameResult.findMany({
+      where: { event: { teamId } },
+      include: { event: true },
+      orderBy: { event: { startsAt: "desc" } },
+    }),
+    getCurrentUser(),
+  ]);
+
+  const membership = user ? await getMembership(teamId, user.id) : null;
+  const isPrivileged = membership?.role === "ADMIN" || membership?.role === "COACH";
 
   const record = results.reduce(
     (acc, r) => {
@@ -92,24 +99,38 @@ export default async function StandingsPage({
                       {r.teamScore}-{r.opponentScore}
                     </span>
                   )}
-                  {(["WIN", "LOSS", "TIE"] as const).map((o) => (
-                    <form key={o} action={setGameOutcome.bind(null, teamId, r.eventId, o)}>
-                      <button
-                        type="submit"
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          r.outcome === o
-                            ? o === "WIN"
-                              ? "bg-green-600 text-white"
-                              : o === "LOSS"
-                              ? "bg-red-600 text-white"
-                              : "bg-neutral-600 text-white"
-                            : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800"
-                        }`}
-                      >
-                        {o === "WIN" ? "W" : o === "LOSS" ? "L" : "T"}
-                      </button>
-                    </form>
-                  ))}
+                  {isPrivileged ? (
+                    (["WIN", "LOSS", "TIE"] as const).map((o) => (
+                      <form key={o} action={setGameOutcome.bind(null, teamId, r.eventId, o)}>
+                        <button
+                          type="submit"
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            r.outcome === o
+                              ? o === "WIN"
+                                ? "bg-green-600 text-white"
+                                : o === "LOSS"
+                                ? "bg-red-600 text-white"
+                                : "bg-neutral-600 text-white"
+                              : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800"
+                          }`}
+                        >
+                          {o === "WIN" ? "W" : o === "LOSS" ? "L" : "T"}
+                        </button>
+                      </form>
+                    ))
+                  ) : (
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        r.outcome === "WIN"
+                          ? "bg-green-600 text-white"
+                          : r.outcome === "LOSS"
+                          ? "bg-red-600 text-white"
+                          : "bg-neutral-600 text-white"
+                      }`}
+                    >
+                      {r.outcome === "WIN" ? "W" : r.outcome === "LOSS" ? "L" : "T"}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

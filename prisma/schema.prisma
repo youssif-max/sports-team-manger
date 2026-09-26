@@ -37,22 +37,37 @@ model Team {
 }
 
 model User {
-  id            String           @id @default(cuid())
-  name          String
-  photoUrl      String?
-  email         String?          @unique
-  passwordHash  String?
-  phone         String?
-  createdAt     DateTime         @default(now())
-  memberships   TeamMembership[]
-  chatMessages  ChatMessage[]
-  announcements Announcement[]
-  rsvps         Rsvp[]
-  attendance    Attendance[]
-  gameStats     GameStat[]
-  highlights    Highlight[]
-  plays         Play[]
-  pushSubscriptions PushSubscription[]
+  id                   String           @id @default(cuid())
+  name                 String
+  photoUrl             String?
+  email                String?          @unique
+  passwordHash         String?
+  phone                String?
+  dateOfBirth          DateTime?
+  failedLoginAttempts  Int              @default(0)
+  lockedUntil          DateTime?
+  createdAt            DateTime         @default(now())
+  memberships          TeamMembership[]
+  chatMessages         ChatMessage[]
+  announcements        Announcement[]
+  rsvps                Rsvp[]
+  attendance           Attendance[]
+  gameStats            GameStat[]
+  highlights           Highlight[]
+  plays                Play[]
+  pushSubscriptions    PushSubscription[]
+  sessions             Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model PushSubscription {

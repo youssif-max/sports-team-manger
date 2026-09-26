@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { addNewPlayerToTeam } from "@/lib/actions/team";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 
 export default async function NewPlayerPage({
   params,
@@ -6,6 +8,13 @@ export default async function NewPlayerPage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+
+  const user = await getCurrentUser();
+  const membership = user ? await getMembership(teamId, user.id) : null;
+  if (!membership || (membership.role !== "ADMIN" && membership.role !== "COACH")) {
+    redirect(`/teams/${teamId}/roster`);
+  }
+
   const action = addNewPlayerToTeam.bind(null, teamId);
 
   return (

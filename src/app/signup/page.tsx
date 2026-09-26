@@ -40,6 +40,16 @@ export default function SignupPage() {
           placeholder="Email"
           className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
         />
+        <label className="text-sm font-medium text-neutral-500">
+          Date of birth
+          <input
+            name="dateOfBirth"
+            type="date"
+            required
+            max={new Date().toISOString().slice(0, 10)}
+            className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+          />
+        </label>
         <input
           name="password"
           type="password"
@@ -74,6 +84,18 @@ export default function SignupPage() {
         >
           Sign in
         </Link>
+      </p>
+
+      <p className="text-center text-xs text-neutral-400">
+        By creating an account, you agree to our{" "}
+        <Link href="/terms" className="underline hover:text-neutral-600 dark:hover:text-neutral-300">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="underline hover:text-neutral-600 dark:hover:text-neutral-300">
+          Privacy Policy
+        </Link>
+        .
       </p>
     </main>
   );

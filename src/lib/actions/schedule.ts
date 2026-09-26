@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { sendPushToTeam } from "@/lib/actions/push";
+import { requireRole, requireMembership } from "@/lib/auth";
 
 async function notifyGameResult(
   teamId: string,
@@ -28,6 +29,8 @@ async function notifyGameResult(
 }
 
 export async function createEvent(teamId: string, formData: FormData) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+
   const type = String(formData.get("type") ?? "PRACTICE") as
     | "PRACTICE"
     | "GAME"
@@ -112,12 +115,14 @@ export async function createEvent(teamId: string, formData: FormData) {
 }
 
 export async function deleteEvent(teamId: string, eventId: string) {
-  await prisma.event.delete({ where: { id: eventId } });
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+  await prisma.event.deleteMany({ where: { id: eventId, teamId } });
   revalidatePath(`/teams/${teamId}/schedule`);
   redirect(`/teams/${teamId}/schedule`);
 }
 
 export async function deleteEventSeries(teamId: string, recurringGroupId: string) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
   await prisma.event.deleteMany({ where: { teamId, recurringGroupId } });
   revalidatePath(`/teams/${teamId}/schedule`);
   redirect(`/teams/${teamId}/schedule`);
@@ -129,6 +134,13 @@ export async function setRsvp(
   userId: string,
   status: "IN" | "OUT" | "MAYBE"
 ) {
+  const { user, membership } = await requireMembership(teamId);
+  // Anyone can set their own RSVP; only an admin/coach may set it on behalf
+  // of someone else (e.g. a roster placeholder with no login of their own).
+  if (userId !== user.id && membership.role !== "ADMIN" && membership.role !== "COACH") {
+    return;
+  }
+
   await prisma.rsvp.upsert({
     where: { eventId_userId: { eventId, userId } },
     update: { status, respondedAt: new Date() },
@@ -143,6 +155,8 @@ export async function setAttendance(
   userId: string,
   status: "PRESENT" | "ABSENT" | "LATE" | "UNKNOWN"
 ) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+
   await prisma.attendance.upsert({
     where: { eventId_userId: { eventId, userId } },
     update: { status },
@@ -179,6 +193,8 @@ export async function setAttendanceForm(
 }
 
 export async function recordResult(teamId: string, eventId: string, formData: FormData) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+
   const teamScore = Number(formData.get("teamScore") ?? 0);
   const opponentScore = Number(formData.get("opponentScore") ?? 0);
   const outcome =
@@ -201,6 +217,8 @@ export async function setGameOutcome(
   eventId: string,
   outcome: "WIN" | "LOSS" | "TIE"
 ) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+
   await prisma.gameResult.upsert({
     where: { eventId },
     update: { outcome },
@@ -216,6 +234,8 @@ export async function setGameOutcome(
 }
 
 export async function clearGameOutcome(teamId: string, eventId: string) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+
   await prisma.gameResult.delete({ where: { eventId } }).catch(() => undefined);
 
   revalidatePath(`/teams/${teamId}/gamedays`);
@@ -224,6 +244,8 @@ export async function clearGameOutcome(teamId: string, eventId: string) {
 }
 
 export async function recordStats(teamId: string, eventId: string, formData: FormData) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+
   const entries = Array.from(formData.entries()).filter(([key]) =>
     key.startsWith("stat:")
   );
@@ -256,6 +278,8 @@ export async function recordStats(teamId: string, eventId: string, formData: For
 }
 
 export async function addStatDefinition(teamId: string, formData: FormData) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
   await prisma.statDefinition

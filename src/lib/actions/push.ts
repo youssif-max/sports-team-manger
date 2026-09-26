@@ -38,7 +38,10 @@ export async function saveSubscription(subscription: {
 }
 
 export async function removeSubscription(endpoint: string) {
-  await prisma.pushSubscription.deleteMany({ where: { endpoint } });
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: user.id } });
 }
 
 export async function sendPushToTeam(

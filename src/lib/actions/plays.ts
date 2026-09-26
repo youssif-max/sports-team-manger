@@ -3,11 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { requireMembership } from "@/lib/auth";
 
 export async function createPlay(teamId: string, formData: FormData) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const { user } = await requireMembership(teamId);
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
@@ -18,7 +17,7 @@ export async function createPlay(teamId: string, formData: FormData) {
   if (!title || (!diagram && !fileUrl)) return;
 
   await prisma.play.create({
-    data: { teamId, title, description, diagram, thumbnail, fileUrl, createdById: user!.id },
+    data: { teamId, title, description, diagram, thumbnail, fileUrl, createdById: user.id },
   });
 
   revalidatePath(`/teams/${teamId}/playbook`);
@@ -26,6 +25,16 @@ export async function createPlay(teamId: string, formData: FormData) {
 }
 
 export async function deletePlay(teamId: string, playId: string) {
-  await prisma.play.delete({ where: { id: playId } });
+  const { user, membership } = await requireMembership(teamId);
+  const isPrivileged = membership.role === "ADMIN" || membership.role === "COACH";
+
+  await prisma.play.deleteMany({
+    where: {
+      id: playId,
+      teamId,
+      ...(isPrivileged ? {} : { createdById: user.id }),
+    },
+  });
+
   revalidatePath(`/teams/${teamId}/playbook`);
 }

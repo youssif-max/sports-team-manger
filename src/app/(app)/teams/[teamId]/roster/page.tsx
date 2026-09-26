@@ -30,6 +30,7 @@ export default async function RosterPage({
 
   const myMembership = user ? await getMembership(teamId, user.id) : null;
   const isAdmin = myMembership?.role === "ADMIN";
+  const isPrivileged = isAdmin || myMembership?.role === "COACH";
 
   const groups: Record<string, typeof memberships> = {
     ADMIN: [],
@@ -43,12 +44,14 @@ export default async function RosterPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Roster</h1>
-        <Link
-          href={`/teams/${teamId}/roster/new`}
-          className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          + Add Player
-        </Link>
+        {isPrivileged && (
+          <Link
+            href={`/teams/${teamId}/roster/new`}
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
+          >
+            + Add Player
+          </Link>
+        )}
       </div>
 
       {(["ADMIN", "COACH", "PLAYER", "PARENT"] as const).map((role) =>

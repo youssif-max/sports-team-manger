@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, getMembership } from "@/lib/auth";
+import { getCurrentUser, getMembership, requireRole, requireMembership } from "@/lib/auth";
 
 const DEFAULT_STATS: Record<string, string[]> = {
   soccer: ["Goals", "Assists", "Saves"],
@@ -115,16 +115,22 @@ export async function updateMemberRole(
   userId: string,
   formData: FormData
 ) {
-  const admin = await getCurrentUser();
-  if (!admin) redirect("/login");
-
-  const adminMembership = await getMembership(teamId, admin!.id);
-  if (!adminMembership || adminMembership.role !== "ADMIN") {
-    throw new Error("Only team admins can change roles.");
-  }
+  await requireRole(teamId, ["ADMIN"]);
 
   const role = String(formData.get("role") ?? "");
   if (!["ADMIN", "COACH", "PLAYER", "PARENT"].includes(role)) return;
+
+  if (role !== "ADMIN") {
+    const target = await prisma.teamMembership.findUnique({
+      where: { teamId_userId: { teamId, userId } },
+    });
+    if (target?.role === "ADMIN") {
+      const adminCount = await prisma.teamMembership.count({
+        where: { teamId, role: "ADMIN" },
+      });
+      if (adminCount <= 1) return; // never leave a team with zero admins
+    }
+  }
 
   await prisma.teamMembership.update({
     where: { teamId_userId: { teamId, userId } },
@@ -135,6 +141,8 @@ export async function updateMemberRole(
 }
 
 export async function addNewPlayerToTeam(teamId: string, formData: FormData) {
+  await requireRole(teamId, ["ADMIN", "COACH"]);
+
   const name = String(formData.get("name") ?? "").trim();
   const role = String(formData.get("role") ?? "PLAYER") as "COACH" | "PLAYER" | "PARENT";
   const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim() || null;
@@ -177,6 +185,10 @@ export async function updateMembership(
   userId: string,
   formData: FormData
 ) {
+  const { user, membership } = await requireMembership(teamId);
+  const isPrivileged = membership.role === "ADMIN" || membership.role === "COACH";
+  if (!isPrivileged && user.id !== userId) return;
+
   const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim() || null;
   const position = String(formData.get("position") ?? "").trim() || null;
   const photoUrl = String(formData.get("photoUrl") ?? "").trim() || null;
@@ -203,6 +215,18 @@ export async function updateMembership(
 }
 
 export async function removeMembership(teamId: string, userId: string) {
+  await requireRole(teamId, ["ADMIN"]);
+
+  const target = await prisma.teamMembership.findUnique({
+    where: { teamId_userId: { teamId, userId } },
+  });
+  if (target?.role === "ADMIN") {
+    const adminCount = await prisma.teamMembership.count({
+      where: { teamId, role: "ADMIN" },
+    });
+    if (adminCount <= 1) return; // never leave a team with zero admins
+  }
+
   await prisma.teamMembership.delete({
     where: { teamId_userId: { teamId, userId } },
   });

@@ -4,6 +4,7 @@ import { formatDateTime } from "@/lib/format";
 import { EventTypeBadge } from "@/components/EventTypeBadge";
 import { ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ScheduleViewTabs } from "@/components/ScheduleViewTabs";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 
 export default async function SchedulePage({
   params,
@@ -11,6 +12,11 @@ export default async function SchedulePage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+
+  const user = await getCurrentUser();
+  const membership = user ? await getMembership(teamId, user.id) : null;
+  const isPrivileged = membership?.role === "ADMIN" || membership?.role === "COACH";
+
   const now = new Date();
   const rangeStart = new Date(now);
   rangeStart.setDate(rangeStart.getDate() - 120);
@@ -103,12 +109,14 @@ export default async function SchedulePage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Schedule</h1>
-        <Link
-          href={`/teams/${teamId}/schedule/new`}
-          className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          + Add Event
-        </Link>
+        {isPrivileged && (
+          <Link
+            href={`/teams/${teamId}/schedule/new`}
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
+          >
+            + Add Event
+          </Link>
+        )}
       </div>
 
       <ScheduleViewTabs list={listView} calendar={calendarView} />
