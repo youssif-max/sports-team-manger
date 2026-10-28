@@ -23,6 +23,7 @@ export function ChatRoom({ teamId, currentUserId }: { teamId: string; currentUse
     async function poll() {
       try {
         const res = await fetch(`/api/teams/${teamId}/chat`, { cache: "no-store" });
+        if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) setMessages(data.messages);
       } catch {
@@ -52,6 +53,7 @@ export function ChatRoom({ teamId, currentUserId }: { teamId: string; currentUse
     startTransition(async () => {
       await postChatMessage(teamId, formData);
       const res = await fetch(`/api/teams/${teamId}/chat`, { cache: "no-store" });
+      if (!res.ok) return;
       const data = await res.json();
       setMessages(data.messages);
     });

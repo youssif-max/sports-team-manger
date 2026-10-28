@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { getStripeClient } from "@/lib/stripe";
 import { PREMIUM_PLANS, type PremiumPlan } from "@/lib/billing";
+import { rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
 
 async function originUrl(): Promise<string> {
   // These redirect URLs control where a payment flow sends the admin back
@@ -23,6 +24,9 @@ async function originUrl(): Promise<string> {
 
 export async function startCheckout(teamId: string, plan: PremiumPlan) {
   const { user } = await requireRole(teamId, ["ADMIN"]);
+  if (!(await rateLimitUser(user.id, "checkout", 10, RATE_WINDOWS.HOUR))) {
+    redirect(`/teams/${teamId}/premium?error=rate-limited`);
+  }
 
   const stripe = getStripeClient();
   const priceId = PREMIUM_PLANS[plan]?.priceId;
@@ -59,7 +63,10 @@ export async function startCheckout(teamId: string, plan: PremiumPlan) {
 }
 
 export async function openBillingPortal(teamId: string) {
-  await requireRole(teamId, ["ADMIN"]);
+  const { user } = await requireRole(teamId, ["ADMIN"]);
+  if (!(await rateLimitUser(user.id, "portal", 10, RATE_WINDOWS.HOUR))) {
+    redirect(`/teams/${teamId}/premium?error=rate-limited`);
+  }
 
   const stripe = getStripeClient();
   const team = await prisma.team.findUniqueOrThrow({ where: { id: teamId } });

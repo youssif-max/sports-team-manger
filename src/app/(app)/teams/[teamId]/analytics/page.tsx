@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { isTeamPremium } from "@/lib/billing";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 
 export default async function AnalyticsPage({
@@ -27,6 +28,17 @@ export default async function AnalyticsPage({
         >
           Upgrade to Premium
         </Link>
+      </div>
+    );
+  }
+
+  const viewer = await getCurrentUser();
+  const viewerMembership = viewer ? await getMembership(teamId, viewer.id) : null;
+  if (viewerMembership?.role !== "ADMIN" && viewerMembership?.role !== "COACH") {
+    return (
+      <div className="mx-auto max-w-md rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900">
+        Team analytics rank individual players, so they&apos;re only visible to coaches and
+        admins. You can see your own stats on your profile.
       </div>
     );
   }

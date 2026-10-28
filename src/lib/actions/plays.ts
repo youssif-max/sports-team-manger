@@ -6,9 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { requireMembership } from "@/lib/auth";
 import { isSafeHttpUrl } from "@/lib/url";
 import { maxUploadBytesFor, dataUrlByteLength } from "@/lib/billing";
+import { rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
 
 export async function createPlay(teamId: string, formData: FormData) {
   const { user } = await requireMembership(teamId);
+  if (!(await rateLimitUser(user.id, "play-create", 20, RATE_WINDOWS.HOUR))) return;
 
   const title = String(formData.get("title") ?? "").trim().slice(0, 200);
   const description = String(formData.get("description") ?? "").trim().slice(0, 2000) || null;
@@ -36,6 +38,7 @@ export async function createPlay(teamId: string, formData: FormData) {
 export async function deletePlay(teamId: string, playId: string) {
   const { user, membership } = await requireMembership(teamId);
   const isPrivileged = membership.role === "ADMIN" || membership.role === "COACH";
+  if (!(await rateLimitUser(user.id, "play-delete", 60, RATE_WINDOWS.HOUR))) return;
 
   await prisma.play.deleteMany({
     where: {

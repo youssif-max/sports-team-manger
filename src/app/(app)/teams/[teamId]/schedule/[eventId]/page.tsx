@@ -65,6 +65,15 @@ export default async function EventDetailPage({
   const isPrivileged =
     myMembership?.role === "ADMIN" || myMembership?.role === "COACH";
 
+  // Other players' RSVP, attendance and stats are for coaches/admins only;
+  // everyone else sees just their own row plus anonymous RSVP totals.
+  const visibleMembers = isPrivileged ? members : members.filter((m) => m.userId === user?.id);
+  const rsvpCounts = { IN: 0, OUT: 0, MAYBE: 0 };
+  for (const m of members) {
+    const status = rsvpByUser.get(m.userId)?.status;
+    if (status === "IN" || status === "OUT" || status === "MAYBE") rsvpCounts[status]++;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
@@ -195,10 +204,15 @@ export default async function EventDetailPage({
 
       <section className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h2 className="mb-3 text-sm font-semibold uppercase text-neutral-400">
-          Roster &amp; Attendance
+          {isPrivileged ? "Roster & Attendance" : "Your Attendance"}
         </h2>
+        {!isPrivileged && (
+          <p className="mb-2 text-xs text-neutral-500">
+            Team RSVPs: {rsvpCounts.IN} in · {rsvpCounts.MAYBE} maybe · {rsvpCounts.OUT} out
+          </p>
+        )}
         <div className="flex flex-col divide-y divide-neutral-100 dark:divide-neutral-800">
-          {members.map((m) => (
+          {visibleMembers.map((m) => (
             <div key={m.id} className="flex items-center justify-between gap-2 py-2">
               <div className="flex min-w-0 items-center gap-2">
                 <Avatar name={m.user.name} photoUrl={m.user.photoUrl} size={32} />
@@ -287,7 +301,7 @@ export default async function EventDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {members.map((m) => (
+                  {visibleMembers.map((m) => (
                     <tr key={m.id} className="border-t border-neutral-100 dark:border-neutral-800">
                       <td className="py-2 pr-4 font-medium">{m.user.name}</td>
                       {statDefs.map((sd) => (

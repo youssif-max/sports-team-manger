@@ -11,6 +11,9 @@ import {
   getCurrentSessionToken,
 } from "@/lib/auth";
 import { isSafeHttpUrl } from "@/lib/url";
+import { rateLimit, rateLimitIp, rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
+
+const TOO_MANY = "Too many attempts. Please wait a few minutes and try again.";
 
 export type AuthFormState = { error?: string } | undefined;
 export type AccountFormState = { error?: string; success?: boolean } | undefined;
@@ -45,6 +48,8 @@ export async function signUp(
   _prevState: AuthFormState,
   formData: FormData
 ): Promise<AuthFormState> {
+  if (!(await rateLimitIp("signup", 10, RATE_WINDOWS.HOUR))) return { error: TOO_MANY };
+
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
   const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
   const password = String(formData.get("password") ?? "");
@@ -114,6 +119,14 @@ export async function signIn(
     return { error: "Please enter your email and password." };
   }
 
+  // Per-IP covers one machine hammering many accounts; per-email covers many
+  // machines hammering one account (the lockout below also does that, but
+  // this keeps working for emails that don't exist).
+  const allowed =
+    (await rateLimitIp("login", 20, 15 * RATE_WINDOWS.MINUTE)) &&
+    (await rateLimit(`login-email:${email}`, 10, 15 * RATE_WINDOWS.MINUTE));
+  if (!allowed) return { error: TOO_MANY };
+
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (user?.lockedUntil && user.lockedUntil > new Date()) {
@@ -159,6 +172,7 @@ export async function updateProfile(
 ): Promise<AccountFormState> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!(await rateLimitUser(user.id, "profile", 20, RATE_WINDOWS.HOUR))) return { error: TOO_MANY };
 
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
   const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
@@ -194,6 +208,9 @@ export async function changePassword(
 ): Promise<AccountFormState> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!(await rateLimitUser(user.id, "password", 5, 15 * RATE_WINDOWS.MINUTE))) {
+    return { error: TOO_MANY };
+  }
 
   const currentPassword = String(formData.get("currentPassword") ?? "");
   const newPassword = String(formData.get("newPassword") ?? "");
@@ -239,6 +256,9 @@ export async function deleteMyAccount(
 ): Promise<AccountFormState> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!(await rateLimitUser(user.id, "delete-account", 5, 15 * RATE_WINDOWS.MINUTE))) {
+    return { error: TOO_MANY };
+  }
 
   const password = String(formData.get("password") ?? "");
   if (!password) return { error: "Enter your password to confirm." };

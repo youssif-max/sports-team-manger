@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { removeMembership } from "@/lib/actions/team";
@@ -12,6 +13,18 @@ export default async function PlayerProfilePage({
   params: Promise<{ teamId: string; userId: string }>;
 }) {
   const { teamId, userId } = await params;
+
+  // Contact details, emergency contacts, stats and attendance are only for
+  // the player themselves and the team's coaches/admins — this is enforced
+  // here on the server, not just by hiding the links.
+  const viewer = await getCurrentUser();
+  if (!viewer) redirect("/login");
+  const viewerMembership = await getMembership(teamId, viewer.id);
+  const viewerIsPrivileged =
+    viewerMembership?.role === "ADMIN" || viewerMembership?.role === "COACH";
+  if (!viewerIsPrivileged && viewer.id !== userId) {
+    redirect(`/teams/${teamId}/roster`);
+  }
 
   const membership = await prisma.teamMembership.findUnique({
     where: { teamId_userId: { teamId, userId } },
@@ -136,14 +149,16 @@ export default async function PlayerProfilePage({
         )}
       </section>
 
-      <form action={removeAction} className="self-start">
-        <ConfirmButton
-          confirmText={`Remove ${membership.user.name} from this team's roster?`}
-          className="text-xs font-medium text-red-600 hover:underline"
-        >
-          Remove from roster
-        </ConfirmButton>
-      </form>
+      {viewerMembership?.role === "ADMIN" && (
+        <form action={removeAction} className="self-start">
+          <ConfirmButton
+            confirmText={`Remove ${membership.user.name} from this team's roster?`}
+            className="text-xs font-medium text-red-600 hover:underline"
+          >
+            Remove from roster
+          </ConfirmButton>
+        </form>
+      )}
     </div>
   );
 }

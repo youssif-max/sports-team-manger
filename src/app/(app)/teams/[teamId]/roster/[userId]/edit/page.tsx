@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser, getMembership } from "@/lib/auth";
 import { updateMembership } from "@/lib/actions/team";
 
 export default async function EditPlayerPage({
@@ -8,6 +9,16 @@ export default async function EditPlayerPage({
   params: Promise<{ teamId: string; userId: string }>;
 }) {
   const { teamId, userId } = await params;
+
+  const viewer = await getCurrentUser();
+  if (!viewer) redirect("/login");
+  const viewerMembership = await getMembership(teamId, viewer.id);
+  const viewerIsPrivileged =
+    viewerMembership?.role === "ADMIN" || viewerMembership?.role === "COACH";
+  if (!viewerIsPrivileged && viewer.id !== userId) {
+    redirect(`/teams/${teamId}/roster`);
+  }
+
   const membership = await prisma.teamMembership.findUnique({
     where: { teamId_userId: { teamId, userId } },
     include: { user: true },

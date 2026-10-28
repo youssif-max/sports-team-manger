@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership, requireRole, requireMembership } from "@/lib/auth";
 import { isSafeHttpUrl } from "@/lib/url";
 import { isTeamPremium } from "@/lib/billing";
+import { randomInt } from "crypto";
+import { rateLimitUser, rateLimitIp, RATE_WINDOWS } from "@/lib/rateLimit";
 
 const DEFAULT_STATS: Record<string, string[]> = {
   soccer: ["Goals", "Assists", "Saves"],
@@ -22,7 +24,7 @@ const JOIN_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O or 1/I
 function generateJoinCode() {
   let code = "";
   for (let i = 0; i < 6; i++) {
-    code += JOIN_CODE_CHARS[Math.floor(Math.random() * JOIN_CODE_CHARS.length)];
+    code += JOIN_CODE_CHARS[randomInt(JOIN_CODE_CHARS.length)];
   }
   return code;
 }
@@ -39,6 +41,7 @@ async function uniqueJoinCode() {
 export async function createTeam(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!(await rateLimitUser(user.id, "team-create", 5, RATE_WINDOWS.HOUR))) return;
 
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
   const sport = String(formData.get("sport") ?? "").trim().slice(0, 60);
@@ -98,6 +101,15 @@ export async function joinTeamByCode(
     return { error: "Invalid role." };
   }
 
+  // Join codes are short, so cap guessing hard — both per account and per IP
+  // (a script could otherwise sign up many accounts to get around the first).
+  const allowed =
+    (await rateLimitUser(user.id, "join", 10, 15 * RATE_WINDOWS.MINUTE)) &&
+    (await rateLimitIp("join", 30, 15 * RATE_WINDOWS.MINUTE));
+  if (!allowed) {
+    return { error: "Too many attempts. Please wait a few minutes and try again." };
+  }
+
   const team = await prisma.team.findUnique({ where: { joinCode: code } });
   if (!team) {
     return { error: "That code doesn't match any team." };
@@ -120,7 +132,8 @@ export async function updateMemberRole(
   userId: string,
   formData: FormData
 ) {
-  await requireRole(teamId, ["ADMIN"]);
+  const { user } = await requireRole(teamId, ["ADMIN"]);
+  if (!(await rateLimitUser(user.id, "role-change", 60, RATE_WINDOWS.HOUR))) return;
 
   const role = String(formData.get("role") ?? "");
   if (!["ADMIN", "COACH", "PLAYER", "PARENT"].includes(role)) return;
@@ -146,7 +159,8 @@ export async function updateMemberRole(
 }
 
 export async function addNewPlayerToTeam(teamId: string, formData: FormData) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "roster-add", 40, RATE_WINDOWS.HOUR))) return;
 
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
   const roleRaw = String(formData.get("role") ?? "PLAYER");
@@ -199,6 +213,7 @@ export async function updateMembership(
   const { user, membership } = await requireMembership(teamId);
   const isPrivileged = membership.role === "ADMIN" || membership.role === "COACH";
   if (!isPrivileged && user.id !== userId) return;
+  if (!(await rateLimitUser(user.id, "roster-edit", 60, RATE_WINDOWS.HOUR))) return;
 
   const jerseyNumber = String(formData.get("jerseyNumber") ?? "").trim().slice(0, 10) || null;
   const position = String(formData.get("position") ?? "").trim().slice(0, 60) || null;
@@ -227,7 +242,8 @@ export async function updateMembership(
 }
 
 export async function removeMembership(teamId: string, userId: string) {
-  await requireRole(teamId, ["ADMIN"]);
+  const { user } = await requireRole(teamId, ["ADMIN"]);
+  if (!(await rateLimitUser(user.id, "member-remove", 30, RATE_WINDOWS.HOUR))) return;
 
   const target = await prisma.teamMembership.findUnique({
     where: { teamId_userId: { teamId, userId } },
@@ -247,7 +263,8 @@ export async function removeMembership(teamId: string, userId: string) {
 }
 
 export async function updateTeamSettings(teamId: string, formData: FormData) {
-  await requireRole(teamId, ["ADMIN"]);
+  const { user } = await requireRole(teamId, ["ADMIN"]);
+  if (!(await rateLimitUser(user.id, "team-settings", 30, RATE_WINDOWS.HOUR))) return;
 
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
   const season = String(formData.get("season") ?? "").trim().slice(0, 50) || null;

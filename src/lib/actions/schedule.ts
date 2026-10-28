@@ -3,8 +3,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { sendPushToTeam } from "@/lib/actions/push";
+import { sendPushToTeam } from "@/lib/push";
 import { requireRole, requireMembership } from "@/lib/auth";
+import { rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
 
 async function notifyGameResult(
   teamId: string,
@@ -29,7 +30,8 @@ async function notifyGameResult(
 }
 
 export async function createEvent(teamId: string, formData: FormData) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "event-create", 30, RATE_WINDOWS.HOUR))) return;
 
   const typeRaw = String(formData.get("type") ?? "PRACTICE");
   const type: "PRACTICE" | "GAME" | "OTHER" =
@@ -114,14 +116,16 @@ export async function createEvent(teamId: string, formData: FormData) {
 }
 
 export async function deleteEvent(teamId: string, eventId: string) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "event-delete", 60, RATE_WINDOWS.HOUR))) return;
   await prisma.event.deleteMany({ where: { id: eventId, teamId } });
   revalidatePath(`/teams/${teamId}/schedule`);
   redirect(`/teams/${teamId}/schedule`);
 }
 
 export async function deleteEventSeries(teamId: string, recurringGroupId: string) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "event-delete", 60, RATE_WINDOWS.HOUR))) return;
   await prisma.event.deleteMany({ where: { teamId, recurringGroupId } });
   revalidatePath(`/teams/${teamId}/schedule`);
   redirect(`/teams/${teamId}/schedule`);
@@ -139,6 +143,7 @@ export async function setRsvp(
   if (userId !== user.id && membership.role !== "ADMIN" && membership.role !== "COACH") {
     return;
   }
+  if (!(await rateLimitUser(user.id, "rsvp", 60, RATE_WINDOWS.MINUTE))) return;
 
   await prisma.rsvp.upsert({
     where: { eventId_userId: { eventId, userId } },
@@ -154,7 +159,8 @@ export async function setAttendance(
   userId: string,
   status: "PRESENT" | "ABSENT" | "LATE" | "UNKNOWN"
 ) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "attendance", 120, RATE_WINDOWS.MINUTE))) return;
 
   await prisma.attendance.upsert({
     where: { eventId_userId: { eventId, userId } },
@@ -191,7 +197,9 @@ export async function setAttendanceForm(
 }
 
 export async function recordResult(teamId: string, eventId: string, formData: FormData) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  // Each result sends a push to the whole team, so keep this fairly tight.
+  if (!(await rateLimitUser(user.id, "result", 30, RATE_WINDOWS.HOUR))) return;
 
   const teamScoreRaw = Number(formData.get("teamScore") ?? 0);
   const opponentScoreRaw = Number(formData.get("opponentScore") ?? 0);
@@ -217,7 +225,8 @@ export async function setGameOutcome(
   eventId: string,
   outcome: "WIN" | "LOSS" | "TIE"
 ) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "result", 30, RATE_WINDOWS.HOUR))) return;
 
   await prisma.gameResult.upsert({
     where: { eventId },
@@ -234,7 +243,8 @@ export async function setGameOutcome(
 }
 
 export async function clearGameOutcome(teamId: string, eventId: string) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "result", 30, RATE_WINDOWS.HOUR))) return;
 
   await prisma.gameResult.delete({ where: { eventId } }).catch(() => undefined);
 
@@ -244,7 +254,8 @@ export async function clearGameOutcome(teamId: string, eventId: string) {
 }
 
 export async function recordStats(teamId: string, eventId: string, formData: FormData) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "stats", 30, RATE_WINDOWS.MINUTE))) return;
 
   // The stat table only ever renders this team's own roster and stat
   // categories, but the field names are still raw form input — verify each
@@ -291,7 +302,8 @@ export async function recordStats(teamId: string, eventId: string, formData: For
 }
 
 export async function addStatDefinition(teamId: string, formData: FormData) {
-  await requireRole(teamId, ["ADMIN", "COACH"]);
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "stat-def", 30, RATE_WINDOWS.HOUR))) return;
 
   const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   if (!name) return;

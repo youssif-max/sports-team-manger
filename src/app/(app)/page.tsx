@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { JoinTeamForm } from "@/components/JoinTeamForm";
+import { HighlightForm } from "@/components/HighlightForm";
+import { HighlightCard } from "@/components/HighlightCard";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { teamTypeLabel } from "@/lib/format";
 
@@ -21,6 +23,24 @@ export default async function DashboardPage({
     include: { _count: { select: { memberships: true } } },
     orderBy: { createdAt: "desc" },
   });
+
+  const roleByTeam = new Map(
+    (
+      await prisma.teamMembership.findMany({
+        where: { userId: user.id },
+        select: { teamId: true, role: true },
+      })
+    ).map((m) => [m.teamId, m.role])
+  );
+  const feed =
+    myTeams.length > 0
+      ? await prisma.highlight.findMany({
+          where: { teamId: { in: myTeams.map((t) => t.id) } },
+          include: { user: true, postedBy: true, team: true },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+        })
+      : [];
 
   return (
     <>
@@ -71,6 +91,50 @@ export default async function DashboardPage({
           </div>
         )}
       </section>
+
+      {myTeams.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-xl font-bold">Highlight Feed</h2>
+            <p className="text-xs text-neutral-500">
+              Post your best plays for your coaches and teammates. Only members of your teams can
+              see these.
+            </p>
+          </div>
+          <HighlightForm mode="feed" teams={myTeams.map((t) => ({ id: t.id, name: t.name }))} />
+          {feed.length === 0 ? (
+            <p className="text-sm text-neutral-400">No highlights yet — be the first to post one.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {feed.map((h) => {
+                const role = roleByTeam.get(h.teamId);
+                return (
+                  <HighlightCard
+                    key={h.id}
+                    showTeam
+                    h={{
+                      id: h.id,
+                      teamId: h.teamId,
+                      teamName: h.team.name,
+                      title: h.title,
+                      description: h.description,
+                      videoUrl: h.videoUrl,
+                      startSeconds: h.startSeconds,
+                      endSeconds: h.endSeconds,
+                      createdAt: h.createdAt,
+                      player: h.user
+                        ? { id: h.user.id, name: h.user.name, photoUrl: h.user.photoUrl }
+                        : null,
+                      postedByName: h.postedBy?.name ?? null,
+                    }}
+                    canDelete={role === "ADMIN" || role === "COACH" || h.postedById === user.id}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       <section>
         <JoinTeamForm />

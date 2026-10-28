@@ -64,12 +64,13 @@ export default function PrivacyPolicyPage() {
 
       <LegalSection heading="3. Who Can See Your Data">
         <p>
-          Information tied to a team (roster entries, contact info, chat, announcements, schedule,
-          stats, attendance, and playbook content) is visible to other members of that same team,
-          based on their role. Admins and coaches can edit roster entries and manage schedules;
-          players and parents can generally view team information and manage their own RSVP and
-          contact details. You must have that team&apos;s join code or an invite link to become a
-          member.
+          A player&apos;s contact details, emergency contact, attendance record and individual
+          stats are visible only to that player and to the team&apos;s coaches and admins. Other
+          members of the team see just a player&apos;s name, photo, jersey number and position on
+          the roster. Team-wide content (chat, announcements, schedule, standings, playbook and
+          highlights you post) is visible to members of that same team. Highlight videos you post
+          are shared only with the teams you post them to, not publicly. You must have that
+          team&apos;s join code or an invite link to become a member.
         </p>
       </LegalSection>
 

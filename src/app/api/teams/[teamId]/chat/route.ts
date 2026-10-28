@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership } from "@/lib/auth";
+import { rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
 
 export async function GET(
   _req: Request,
@@ -16,6 +17,12 @@ export async function GET(
   const membership = await getMembership(teamId, user.id);
   if (!membership) {
     return NextResponse.json({ error: "Not a member of this team" }, { status: 403 });
+  }
+
+  // The chat polls every 3s (20/min per open tab); this leaves headroom for a
+  // few tabs but stops a script from hammering the endpoint.
+  if (!(await rateLimitUser(user.id, "chat-read", 120, RATE_WINDOWS.MINUTE))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const messages = await prisma.chatMessage.findMany({

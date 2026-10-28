@@ -60,7 +60,8 @@ model User {
   rsvps                Rsvp[]
   attendance           Attendance[]
   gameStats            GameStat[]
-  highlights           Highlight[]
+  highlights           Highlight[]        @relation("HighlightPlayer")
+  postedHighlights     Highlight[]        @relation("HighlightPostedBy")
   plays                Play[]
   pushSubscriptions    PushSubscription[]
   sessions             Session[]
@@ -75,6 +76,14 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
 }
 
 model PushSubscription {
@@ -237,14 +246,20 @@ model Highlight {
   id          String   @id @default(cuid())
   team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId      String
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user        User?    @relation("HighlightPlayer", fields: [userId], references: [id], onDelete: SetNull)
   userId      String?
+  postedBy    User?    @relation("HighlightPostedBy", fields: [postedById], references: [id], onDelete: SetNull)
+  postedById  String?
   event       Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   eventId     String?
   title       String
   description String?
   videoUrl    String
+  startSeconds Int?
+  endSeconds   Int?
   createdAt   DateTime @default(now())
+
+  @@index([postedById])
 }
 
 model Play {

@@ -94,26 +94,28 @@ export default async function RosterPage({
                     />
                   )}
 
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/teams/${teamId}/roster/${m.userId}#contact`}
-                      className="flex-1 rounded-lg border border-neutral-300 py-1.5 text-center text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                    >
-                      Contact
-                    </Link>
-                    <Link
-                      href={`/teams/${teamId}/roster/${m.userId}#stats`}
-                      className="flex-1 rounded-lg border border-neutral-300 py-1.5 text-center text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                    >
-                      Stats
-                    </Link>
-                    <Link
-                      href={`/teams/${teamId}/roster/${m.userId}`}
-                      className="flex-1 rounded-lg border border-neutral-300 py-1.5 text-center text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                    >
-                      Profile
-                    </Link>
-                  </div>
+                  {(isPrivileged || m.userId === user?.id) && (
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/teams/${teamId}/roster/${m.userId}#contact`}
+                        className="flex-1 rounded-lg border border-neutral-300 py-1.5 text-center text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                      >
+                        Contact
+                      </Link>
+                      <Link
+                        href={`/teams/${teamId}/roster/${m.userId}#stats`}
+                        className="flex-1 rounded-lg border border-neutral-300 py-1.5 text-center text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                      >
+                        Stats
+                      </Link>
+                      <Link
+                        href={`/teams/${teamId}/roster/${m.userId}`}
+                        className="flex-1 rounded-lg border border-neutral-300 py-1.5 text-center text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                      >
+                        Profile
+                      </Link>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

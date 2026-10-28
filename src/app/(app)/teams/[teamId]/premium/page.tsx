@@ -56,6 +56,12 @@ export default async function PremiumPage({
         </div>
       )}
 
+      {error === "rate-limited" && (
+        <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
+          Too many billing attempts. Please wait a bit and try again.
+        </div>
+      )}
+
       <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex items-center justify-between">
           <div>
