@@ -4,7 +4,9 @@ import { Logo } from "@/components/Logo";
 import { UserMenu } from "@/components/UserMenu";
 import type { User } from "@prisma/client";
 
-export function TopBar({ user }: { user: User }) {
+// Only ever pass the few fields the menu shows — this prop is serialized into
+// the page sent to the browser, so it must never carry the password hash etc.
+export function TopBar({ user }: { user: Pick<User, "name" | "photoUrl" | "email"> }) {
   return (
     <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/90 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90">
       <div className="mx-auto flex h-[57px] max-w-5xl items-center justify-between px-4">

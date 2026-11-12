@@ -7,7 +7,11 @@ import type { User } from "@prisma/client";
 const inputClass =
   "mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900";
 
-export function ProfileForm({ user }: { user: User }) {
+export function ProfileForm({
+  user,
+}: {
+  user: Pick<User, "name" | "email" | "phone" | "photoUrl" | "emailVerifiedAt">;
+}) {
   const [state, formAction, pending] = useActionState(updateProfile, undefined);
   const [email, setEmail] = useState(user.email ?? "");
   const emailChanged = email.trim().toLowerCase() !== (user.email ?? "");

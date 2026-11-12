@@ -3,7 +3,7 @@ import { LegalPage, LegalSection } from "@/components/LegalPage";
 
 export const metadata: Metadata = { title: "Cookie Policy — SportSync" };
 
-const UPDATED = "September 26, 2026";
+const UPDATED = "November 13, 2026";
 
 export default function CookiePolicyPage() {
   return (
@@ -20,6 +20,18 @@ export default function CookiePolicyPage() {
           marked <code>HttpOnly</code> (so page scripts can&apos;t read it) and{" "}
           <code>Secure</code> in production (so it&apos;s only sent over HTTPS). It expires after 30
           days, or immediately when you sign out.
+        </p>
+      </LegalSection>
+
+      <LegalSection heading="A short-lived sign-in cookie">
+        <p>
+          <strong>
+            <code>twofa</code>
+          </strong>{" "}
+          — only if you use two-step verification. After you enter your password, this cookie lasts
+          at most five minutes and lets the next screen (where you enter your authenticator code)
+          know which sign-in attempt it belongs to. It can&apos;t be used to access your account by
+          itself and is deleted once you finish signing in.
         </p>
       </LegalSection>
 

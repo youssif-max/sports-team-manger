@@ -3,7 +3,7 @@ import { LegalPage, LegalSection } from "@/components/LegalPage";
 
 export const metadata: Metadata = { title: "Privacy Policy — SportSync" };
 
-const UPDATED = "September 26, 2026";
+const UPDATED = "November 13, 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -59,6 +59,15 @@ export default function PrivacyPolicyPage() {
           <strong>Parent and guardian links</strong>: a coach or admin can link a parent account to
           a child&apos;s roster entry so the parent can see that child&apos;s details and RSVP for
           them.
+        </p>
+        <p>
+          <strong>Two-step verification</strong>: if you turn it on, we store your authenticator
+          secret (encrypted) and a set of one-time recovery codes (stored only as one-way hashes).
+        </p>
+        <p>
+          <strong>Join requests</strong>: if a team requires approval, we keep your name, email and
+          requested role in a pending request until a coach or admin approves or declines it, or
+          you cancel it.
         </p>
         <p>
           <strong>Billing data</strong>: if a team subscribes to Premium, payment is handled

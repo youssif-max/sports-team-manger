@@ -10,6 +10,8 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { PasswordForm } from "@/components/PasswordForm";
 import { NotificationStatus } from "@/components/NotificationStatus";
 import { DeleteAccountForm } from "@/components/DeleteAccountForm";
+import { TwoFactorSection } from "@/components/TwoFactorSection";
+import { isTwoFactorAvailable } from "@/lib/totp";
 
 export const metadata: Metadata = { title: "Account Settings — SportSync" };
 
@@ -40,7 +42,15 @@ export default async function AccountPage() {
 
       <section className={card}>
         <h2 className={heading}>Profile</h2>
-        <ProfileForm user={user} />
+        <ProfileForm
+          user={{
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            photoUrl: user.photoUrl,
+            emailVerifiedAt: user.emailVerifiedAt,
+          }}
+        />
       </section>
 
       <section className={card}>
@@ -51,6 +61,11 @@ export default async function AccountPage() {
       <section className={card}>
         <h2 className={heading}>Password</h2>
         <PasswordForm />
+      </section>
+
+      <section className={card}>
+        <h2 className={heading}>Two-step verification</h2>
+        <TwoFactorSection enabled={Boolean(user.totpEnabledAt)} available={isTwoFactorAvailable()} />
       </section>
 
       <section className={card}>

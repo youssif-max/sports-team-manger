@@ -121,12 +121,60 @@ export async function joinTeamByCode(
     redirect(`/teams/${team.id}`);
   }
 
+  // Teams can require a coach/admin to approve newcomers (recommended for
+  // youth teams) — the person waits on the dashboard until they're let in.
+  if (team.requireApproval) {
+    await prisma.joinRequest.upsert({
+      where: { teamId_userId: { teamId: team.id, userId: user.id } },
+      update: { role },
+      create: { teamId: team.id, userId: user.id, role },
+    });
+    await logAudit(team.id, user.id, "member.join_requested", role);
+    redirect("/?requested=1");
+  }
+
   await prisma.teamMembership.create({
     data: { teamId: team.id, userId: user!.id, role },
   });
   await logAudit(team.id, user!.id, "member.joined", role);
 
   redirect(`/teams/${team.id}`);
+}
+
+export async function approveJoinRequest(teamId: string, requestId: string) {
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "join-review", 120, RATE_WINDOWS.HOUR))) return;
+
+  // Scoped to this team so a coach can't approve requests for someone else's.
+  const request = await prisma.joinRequest.findFirst({ where: { id: requestId, teamId } });
+  if (!request) return;
+
+  await prisma.$transaction([
+    prisma.teamMembership.upsert({
+      where: { teamId_userId: { teamId, userId: request.userId } },
+      update: {},
+      create: { teamId, userId: request.userId, role: request.role },
+    }),
+    prisma.joinRequest.delete({ where: { id: request.id } }),
+  ]);
+  await logAudit(teamId, user.id, "member.join_approved", request.userId);
+  revalidatePath(`/teams/${teamId}`, "layout");
+}
+
+export async function declineJoinRequest(teamId: string, requestId: string) {
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "join-review", 120, RATE_WINDOWS.HOUR))) return;
+
+  const res = await prisma.joinRequest.deleteMany({ where: { id: requestId, teamId } });
+  if (res.count > 0) await logAudit(teamId, user.id, "member.join_declined", requestId);
+  revalidatePath(`/teams/${teamId}`, "layout");
+}
+
+export async function cancelJoinRequest(requestId: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await prisma.joinRequest.deleteMany({ where: { id: requestId, userId: user.id } });
+  revalidatePath("/");
 }
 
 export async function updateMemberRole(
@@ -353,10 +401,11 @@ export async function updateTeamSettings(teamId: string, formData: FormData) {
   const data: {
     name: string;
     season: string | null;
+    requireApproval: boolean;
     colorPrimary?: string;
     colorSecondary?: string;
     logoUrl?: string | null;
-  } = { name, season };
+  } = { name, season, requireApproval: formData.get("requireApproval") === "on" };
 
   // Custom branding (colors beyond the creation-time preset, and a logo) is
   // a Premium perk — silently ignore attempts to change it on a free team
@@ -372,7 +421,14 @@ export async function updateTeamSettings(teamId: string, formData: FormData) {
   }
 
   await prisma.team.update({ where: { id: teamId }, data });
-  await logAudit(teamId, user.id, "team.settings_updated");
+  await logAudit(
+    teamId,
+    user.id,
+    "team.settings_updated",
+    data.requireApproval !== team.requireApproval
+      ? `join approval ${data.requireApproval ? "on" : "off"}`
+      : undefined
+  );
   revalidatePath(`/teams/${teamId}/settings`);
   revalidatePath(`/teams/${teamId}`, "layout");
 }

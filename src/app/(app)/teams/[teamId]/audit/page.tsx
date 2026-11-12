@@ -7,6 +7,9 @@ export const metadata = { title: "Activity log — SportSync" };
 
 const LABELS: Record<string, string> = {
   "member.joined": "joined the team",
+  "member.join_requested": "asked to join the team",
+  "member.join_approved": "approved a join request",
+  "member.join_declined": "declined a join request",
   "member.added": "added a roster entry",
   "member.removed": "removed a member",
   "member.role_changed": "changed a member's role",

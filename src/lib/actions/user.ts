@@ -16,6 +16,8 @@ import { hashPassword, validateNewPassword, BCRYPT_COST } from "@/lib/passwords"
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { createEmailToken, consumeEmailToken, peekEmailToken } from "@/lib/tokens";
 import { appOrigin } from "@/lib/appUrl";
+import { createLoginChallenge } from "@/lib/loginChallenge";
+import { isTwoFactorAvailable } from "@/lib/totp";
 
 export type AuthFormState = { error?: string; message?: string } | undefined;
 export type AccountFormState = { error?: string; message?: string; success?: boolean } | undefined;
@@ -206,6 +208,17 @@ export async function signIn(
         ...(upgradedHash ? { passwordHash: upgradedHash } : {}),
       },
     });
+  }
+
+  // Accounts with two-factor on don't get a session yet — only a short-lived
+  // challenge that the code page can turn into one. Fail closed if the
+  // encryption key is missing rather than letting the password alone in.
+  if (user.totpEnabledAt) {
+    if (!isTwoFactorAvailable()) {
+      return { error: "Sign-in is temporarily unavailable. Please try again later." };
+    }
+    await createLoginChallenge(user.id, safeRedirectTarget(formData));
+    redirect("/login/verify");
   }
 
   await createSessionCookie(user.id);

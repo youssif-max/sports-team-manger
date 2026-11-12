@@ -8,6 +8,7 @@ import { HighlightCard } from "@/components/HighlightCard";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { teamTypeLabel } from "@/lib/format";
 import { getBlockedIds } from "@/lib/blocks";
+import { cancelJoinRequest } from "@/lib/actions/team";
 
 export default async function DashboardPage({
   searchParams,
@@ -34,6 +35,11 @@ export default async function DashboardPage({
       })
     ).map((m) => [m.teamId, m.role])
   );
+  const pendingRequests = await prisma.joinRequest.findMany({
+    where: { userId: user.id },
+    include: { team: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+  });
   const feed =
     myTeams.length > 0
       ? await prisma.highlight.findMany({
@@ -60,6 +66,24 @@ export default async function DashboardPage({
         <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
           That confirmation link has expired. Request a new one from the banner above.
         </div>
+      )}
+
+      {pendingRequests.length > 0 && (
+        <section className="flex flex-col gap-2 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+          <p className="font-semibold">Waiting for approval</p>
+          {pendingRequests.map((r) => (
+            <div key={r.id} className="flex items-center justify-between gap-3">
+              <span>
+                {r.team.name} — a coach or admin needs to let you in.
+              </span>
+              <form action={cancelJoinRequest.bind(null, r.id)}>
+                <button type="submit" className="text-xs font-medium underline">
+                  Cancel request
+                </button>
+              </form>
+            </div>
+          ))}
+        </section>
       )}
 
       {error === "not-a-member" && (

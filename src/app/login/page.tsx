@@ -86,6 +86,9 @@ export default function LoginPage() {
         <Link href="/cookies" className="hover:underline">
           Cookies
         </Link>
+        <Link href="/support" className="hover:underline">
+          Support
+        </Link>
       </p>
     </main>
   );

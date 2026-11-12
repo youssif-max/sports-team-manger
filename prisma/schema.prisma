@@ -37,6 +37,11 @@ model Team {
   reports        Report[]
   auditLogs      AuditLog[]
   parentLinks    ParentLink[]
+  joinRequests   JoinRequest[]
+
+  // When true, joining with the code/link creates a request that an admin or
+  // coach must approve instead of adding the person straight to the team.
+  requireApproval Boolean @default(false)
 
   // Premium subscription (billed to the whole team, managed via Stripe)
   stripeCustomerId     String?   @unique
@@ -59,6 +64,15 @@ model User {
   failedLoginAttempts  Int              @default(0)
   lockedUntil          DateTime?
   createdAt            DateTime         @default(now())
+
+  // Two-factor authentication (TOTP). The secret is stored encrypted.
+  totpSecretEnc        String?
+  totpEnabledAt        DateTime?
+  totpLastStep         Int?
+  recoveryCodeHashes   String[]         @default([])
+  loginChallenges      LoginChallenge[]
+  joinRequests         JoinRequest[]
+
   emailTokens          EmailToken[]
   reportsMade          Report[]         @relation("ReportReporter")
   blocksMade           Block[]          @relation("Blocker")
@@ -89,6 +103,34 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Created after a correct password for an account with 2FA on; the session is
+// only issued once the second factor is also verified.
+model LoginChallenge {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  tokenHash  String   @unique
+  redirectTo String?
+  attempts   Int      @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+model JoinRequest {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      Role
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([teamId])
 }
 
 enum EmailTokenType {

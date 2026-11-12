@@ -79,6 +79,25 @@ export default async function TeamSettingsPage({
         </section>
 
         <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <h2 className="text-sm font-semibold uppercase text-neutral-400">Privacy</h2>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="requireApproval"
+              defaultChecked={team.requireApproval}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              <span className="font-medium">Approve new members</span>
+              <span className="block text-xs text-neutral-500">
+                Anyone using your join code or invite link waits for an admin or coach to let them
+                in. Recommended for youth teams.
+              </span>
+            </span>
+          </label>
+        </section>
+
+        <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase text-neutral-400">Branding</h2>
             {!premium && (

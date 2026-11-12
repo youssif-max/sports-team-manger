@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, Settings, Flag } from "lucide-react";
+import { Sparkles, Settings, Flag, UserCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership } from "@/lib/auth";
 import { TeamNav } from "@/components/TeamNav";
@@ -27,9 +27,12 @@ export default async function TeamLayout({
   if (!membership) redirect("/?error=not-a-member");
 
   const canSeeJoinCode = membership.role === "ADMIN" || membership.role === "COACH";
-  const openReports = canSeeJoinCode
-    ? await prisma.report.count({ where: { teamId, status: "OPEN" } })
-    : 0;
+  const [openReports, pendingRequests] = canSeeJoinCode
+    ? await Promise.all([
+        prisma.report.count({ where: { teamId, status: "OPEN" } }),
+        prisma.joinRequest.count({ where: { teamId } }),
+      ])
+    : [0, 0];
   const native = await isNativeApp();
 
   return (
@@ -77,6 +80,20 @@ export default async function TeamLayout({
           <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold capitalize backdrop-blur">
             {membership.role.toLowerCase()}
           </span>
+          {canSeeJoinCode && (
+            <Link
+              href={`/teams/${teamId}/requests`}
+              title="Join requests"
+              className="relative rounded-full bg-white/20 p-1.5 backdrop-blur hover:bg-white/30"
+            >
+              <UserCheck size={14} />
+              {pendingRequests > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold">
+                  {pendingRequests}
+                </span>
+              )}
+            </Link>
+          )}
           {canSeeJoinCode && (
             <Link
               href={`/teams/${teamId}/reports`}
