@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, getMembership } from "@/lib/auth";
+import { getCurrentUser, getMembership, isGuardianOf } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { removeMembership } from "@/lib/actions/team";
+import { removeMembership, linkParent, unlinkParent } from "@/lib/actions/team";
 import { formatDate } from "@/lib/format";
 
 export default async function PlayerProfilePage({
@@ -22,7 +22,11 @@ export default async function PlayerProfilePage({
   const viewerMembership = await getMembership(teamId, viewer.id);
   const viewerIsPrivileged =
     viewerMembership?.role === "ADMIN" || viewerMembership?.role === "COACH";
-  if (!viewerIsPrivileged && viewer.id !== userId) {
+  if (
+    !viewerIsPrivileged &&
+    viewer.id !== userId &&
+    !(await isGuardianOf(teamId, viewer.id, userId))
+  ) {
     redirect(`/teams/${teamId}/roster`);
   }
 
@@ -53,6 +57,23 @@ export default async function PlayerProfilePage({
 
   const removeAction = removeMembership.bind(null, teamId, userId);
 
+  const canEdit = viewerIsPrivileged || viewer.id === userId;
+  const [parentMembers, links] = viewerIsPrivileged
+    ? await Promise.all([
+        prisma.teamMembership.findMany({
+          where: { teamId, role: "PARENT" },
+          include: { user: true },
+          orderBy: { user: { name: "asc" } },
+        }),
+        prisma.parentLink.findMany({
+          where: { teamId, childId: userId },
+          include: { parent: true },
+        }),
+      ])
+    : [[], []];
+  const linkedParentIds = new Set(links.map((l) => l.parentId));
+  const linkableParents = parentMembers.filter((p) => !linkedParentIds.has(p.userId));
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -69,12 +90,14 @@ export default async function PlayerProfilePage({
             </p>
           </div>
         </div>
-        <Link
-          href={`/teams/${teamId}/roster/${userId}/edit`}
-          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-        >
-          Edit
-        </Link>
+        {canEdit && (
+          <Link
+            href={`/teams/${teamId}/roster/${userId}/edit`}
+            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+          >
+            Edit
+          </Link>
+        )}
       </div>
 
       <section id="contact" className="scroll-mt-24 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
@@ -148,6 +171,56 @@ export default async function PlayerProfilePage({
           </ul>
         )}
       </section>
+
+      {viewerIsPrivileged && (
+        <section className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <h2 className="mb-1 text-sm font-semibold uppercase text-neutral-400">
+            Parents / guardians
+          </h2>
+          <p className="mb-3 text-xs text-neutral-500">
+            A linked parent can see this player&apos;s details and RSVP for them. Parents need to
+            have joined the team with the Parent role first.
+          </p>
+          {links.length > 0 && (
+            <ul className="mb-3 flex flex-col gap-1.5">
+              {links.map((l) => (
+                <li key={l.id} className="flex items-center justify-between text-sm">
+                  <span>{l.parent.name}</span>
+                  <form action={unlinkParent.bind(null, teamId, userId, l.parentId)}>
+                    <button type="submit" className="text-xs text-red-600 hover:underline">
+                      Unlink
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+          {linkableParents.length > 0 ? (
+            <form action={linkParent.bind(null, teamId, userId)} className="flex gap-2">
+              <select
+                name="parentId"
+                className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+              >
+                {linkableParents.map((p) => (
+                  <option key={p.userId} value={p.userId}>
+                    {p.user.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+              >
+                Link
+              </button>
+            </form>
+          ) : (
+            links.length === 0 && (
+              <p className="text-xs text-neutral-400">No parents on this team yet.</p>
+            )
+          )}
+        </section>
+      )}
 
       {viewerMembership?.role === "ADMIN" && (
         <form action={removeAction} className="self-start">

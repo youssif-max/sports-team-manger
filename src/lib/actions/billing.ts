@@ -1,29 +1,21 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { getStripeClient } from "@/lib/stripe";
 import { PREMIUM_PLANS, type PremiumPlan } from "@/lib/billing";
 import { rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
-
-async function originUrl(): Promise<string> {
-  // These redirect URLs control where a payment flow sends the admin back
-  // to — prefer Vercel's own trusted production-domain env var over the
-  // client-supplied Host header, which could otherwise be spoofed on a
-  // misconfigured or self-hosted deployment.
-  const prodUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (prodUrl) return `https://${prodUrl}`;
-
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
+import { appOrigin as originUrl } from "@/lib/appUrl";
+import { isNativeApp } from "@/lib/nativeApp";
+import { logAudit } from "@/lib/audit";
 
 export async function startCheckout(teamId: string, plan: PremiumPlan) {
   const { user } = await requireRole(teamId, ["ADMIN"]);
+  // Apple requires in-app purchase for subscriptions sold inside an iOS app,
+  // so checkout is simply not offered from the native wrapper.
+  if (await isNativeApp()) redirect(`/teams/${teamId}/premium`);
+  await logAudit(teamId, user.id, "billing.checkout_started", plan);
   if (!(await rateLimitUser(user.id, "checkout", 10, RATE_WINDOWS.HOUR))) {
     redirect(`/teams/${teamId}/premium?error=rate-limited`);
   }

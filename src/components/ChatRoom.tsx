@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/Avatar";
 import { postChatMessage } from "@/lib/actions/community";
+import { blockUser } from "@/lib/actions/moderation";
+import { ReportButton } from "@/components/ReportButton";
 
 type ChatMessage = {
   id: string;
@@ -14,6 +16,7 @@ type ChatMessage = {
 export function ChatRoom({ teamId, currentUserId }: { teamId: string; currentUserId: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [blocked, setBlocked] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -67,7 +70,9 @@ export function ChatRoom({ teamId, currentUserId }: { teamId: string; currentUse
             No messages yet. Start the conversation.
           </p>
         )}
-        {messages.map((m) => (
+        {messages
+          .filter((m) => !blocked.has(m.author.id))
+          .map((m) => (
           <div
             key={m.id}
             className={`flex items-end gap-2 ${
@@ -86,6 +91,22 @@ export function ChatRoom({ teamId, currentUserId }: { teamId: string; currentUse
                 <p className="mb-0.5 text-xs font-semibold opacity-70">{m.author.name}</p>
               )}
               <p className="whitespace-pre-wrap">{m.body}</p>
+              {m.author.id !== currentUserId && (
+                <div className="mt-1 flex items-center gap-3">
+                  <ReportButton teamId={teamId} targetType="CHAT_MESSAGE" targetId={m.id} />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!confirm(`Block ${m.author.name}? You won't see their messages or highlights.`)) return;
+                      const res = await blockUser(m.author.id);
+                      if (res.success) setBlocked((prev) => new Set(prev).add(m.author.id));
+                    }}
+                    className="text-xs text-neutral-400 hover:text-red-600"
+                  >
+                    Block
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}

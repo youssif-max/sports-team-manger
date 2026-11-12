@@ -8,6 +8,7 @@ import { isSafeHttpUrl } from "@/lib/url";
 import { isTeamPremium } from "@/lib/billing";
 import { randomInt } from "crypto";
 import { rateLimitUser, rateLimitIp, RATE_WINDOWS } from "@/lib/rateLimit";
+import { logAudit } from "@/lib/audit";
 
 const DEFAULT_STATS: Record<string, string[]> = {
   soccer: ["Goals", "Assists", "Saves"],
@@ -123,6 +124,7 @@ export async function joinTeamByCode(
   await prisma.teamMembership.create({
     data: { teamId: team.id, userId: user!.id, role },
   });
+  await logAudit(team.id, user!.id, "member.joined", role);
 
   redirect(`/teams/${team.id}`);
 }
@@ -154,6 +156,7 @@ export async function updateMemberRole(
     where: { teamId_userId: { teamId, userId } },
     data: { role: role as "ADMIN" | "COACH" | "PLAYER" | "PARENT" },
   });
+  await logAudit(teamId, user.id, "member.role_changed", `${userId} -> ${role}`);
 
   revalidatePath(`/teams/${teamId}/roster`);
 }
@@ -161,6 +164,10 @@ export async function updateMemberRole(
 export async function addNewPlayerToTeam(teamId: string, formData: FormData) {
   const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
   if (!(await rateLimitUser(user.id, "roster-add", 40, RATE_WINDOWS.HOUR))) return;
+
+  // Whoever adds a player (possibly a child under 13) must confirm they're
+  // allowed to share that person's details.
+  if (formData.get("consent") !== "on") redirect(`/teams/${teamId}/roster/new?error=consent`);
 
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
   const roleRaw = String(formData.get("role") ?? "PLAYER");
@@ -182,7 +189,12 @@ export async function addNewPlayerToTeam(teamId: string, formData: FormData) {
 
   if (!name) return;
 
-  await prisma.user.create({
+  if (email) {
+    const taken = await prisma.user.findUnique({ where: { email } });
+    if (taken) redirect(`/teams/${teamId}/roster/new?error=email-taken`);
+  }
+
+  const created = await prisma.user.create({
     data: {
       name,
       photoUrl,
@@ -200,6 +212,7 @@ export async function addNewPlayerToTeam(teamId: string, formData: FormData) {
       },
     },
   });
+  await logAudit(teamId, user.id, "member.added", `${created.id} as ${role}`);
 
   revalidatePath(`/teams/${teamId}/roster`);
   redirect(`/teams/${teamId}/roster`);
@@ -230,12 +243,22 @@ export async function updateMembership(
     where: { teamId_userId: { teamId, userId } },
     data: { jerseyNumber, position, emergencyContactName, emergencyContactPhone },
   });
-  await prisma.user
-    .update({
-      where: { id: userId },
-      data: { photoUrl, email, phone },
-    })
-    .catch(() => undefined); // ignore if email is already taken by another account
+
+  // Account-level fields belong to the account holder. A coach may only edit
+  // them for roster-only placeholders (no login). Letting a coach change a
+  // real account's email would let them take it over through "forgot
+  // password", so for real accounts the owner changes those in Settings.
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (target) {
+    const isPlaceholder = !target.passwordHash;
+    if (isPlaceholder && isPrivileged) {
+      await prisma.user
+        .update({ where: { id: userId }, data: { photoUrl, email, phone } })
+        .catch(() => undefined); // email already used by another account
+    } else if (user.id === userId) {
+      await prisma.user.update({ where: { id: userId }, data: { photoUrl, phone } });
+    }
+  }
 
   revalidatePath(`/teams/${teamId}/roster/${userId}`);
   redirect(`/teams/${teamId}/roster/${userId}`);
@@ -258,8 +281,64 @@ export async function removeMembership(teamId: string, userId: string) {
   await prisma.teamMembership.delete({
     where: { teamId_userId: { teamId, userId } },
   });
+  await prisma.parentLink.deleteMany({
+    where: { teamId, OR: [{ parentId: userId }, { childId: userId }] },
+  });
+
+  // A roster-only entry with no login and no other team has no reason to
+  // keep existing — delete it so a child's details don't linger orphaned.
+  const leftover = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { _count: { select: { memberships: true } } },
+  });
+  if (leftover && !leftover.passwordHash && leftover._count.memberships === 0) {
+    await prisma.user.delete({ where: { id: userId } });
+  }
+
+  await logAudit(teamId, user.id, "member.removed", userId);
   revalidatePath(`/teams/${teamId}/roster`);
   redirect(`/teams/${teamId}/roster`);
+}
+
+export async function regenerateJoinCode(teamId: string) {
+  const { user } = await requireRole(teamId, ["ADMIN"]);
+  if (!(await rateLimitUser(user.id, "regen-code", 10, RATE_WINDOWS.HOUR))) return;
+
+  const joinCode = await uniqueJoinCode();
+  await prisma.team.update({ where: { id: teamId }, data: { joinCode } });
+  await logAudit(teamId, user.id, "team.join_code_regenerated");
+
+  revalidatePath(`/teams/${teamId}`, "layout");
+}
+
+// Links a PARENT-role member to one child's roster entry so they can see that
+// child's details and RSVP for them.
+export async function linkParent(teamId: string, childId: string, formData: FormData) {
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  if (!(await rateLimitUser(user.id, "parent-link", 60, RATE_WINDOWS.HOUR))) return;
+
+  const parentId = String(formData.get("parentId") ?? "");
+  const [parentMembership, childMembership] = await Promise.all([
+    prisma.teamMembership.findUnique({ where: { teamId_userId: { teamId, userId: parentId } } }),
+    prisma.teamMembership.findUnique({ where: { teamId_userId: { teamId, userId: childId } } }),
+  ]);
+  if (!parentMembership || parentMembership.role !== "PARENT" || !childMembership) return;
+  if (parentId === childId) return;
+
+  await prisma.parentLink.upsert({
+    where: { teamId_parentId_childId: { teamId, parentId, childId } },
+    update: {},
+    create: { teamId, parentId, childId },
+  });
+  await logAudit(teamId, user.id, "parent.linked", `${parentId} -> ${childId}`);
+  revalidatePath(`/teams/${teamId}/roster/${childId}`);
+}
+
+export async function unlinkParent(teamId: string, childId: string, parentId: string) {
+  const { user } = await requireRole(teamId, ["ADMIN", "COACH"]);
+  await prisma.parentLink.deleteMany({ where: { teamId, parentId, childId } });
+  await logAudit(teamId, user.id, "parent.unlinked", `${parentId} -> ${childId}`);
+  revalidatePath(`/teams/${teamId}/roster/${childId}`);
 }
 
 export async function updateTeamSettings(teamId: string, formData: FormData) {
@@ -293,6 +372,7 @@ export async function updateTeamSettings(teamId: string, formData: FormData) {
   }
 
   await prisma.team.update({ where: { id: teamId }, data });
+  await logAudit(teamId, user.id, "team.settings_updated");
   revalidatePath(`/teams/${teamId}/settings`);
   revalidatePath(`/teams/${teamId}`, "layout");
 }

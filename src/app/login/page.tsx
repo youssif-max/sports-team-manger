@@ -8,11 +8,13 @@ import { Logo } from "@/components/Logo";
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(signIn, undefined);
   const [redirectTo, setRedirectTo] = useState("/");
+  const [justReset, setJustReset] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reads from window.location, unavailable during SSR; must run post-mount
     setRedirectTo(params.get("redirect") || "/");
+    setJustReset(params.get("reset") === "1");
   }, []);
 
   return (
@@ -28,10 +30,16 @@ export default function LoginPage() {
       <form action={formAction} className="flex flex-col gap-3">
         <input type="hidden" name="redirect" value={redirectTo} />
         <h2 className="text-sm font-semibold text-neutral-500">Sign in</h2>
+        {justReset && (
+          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
+            Password updated. Sign in with your new password.
+          </p>
+        )}
         <input
           name="email"
           type="email"
           required
+          autoComplete="email"
           placeholder="Email"
           className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
         />
@@ -39,9 +47,13 @@ export default function LoginPage() {
           name="password"
           type="password"
           required
+          autoComplete="current-password"
           placeholder="Password"
           className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
         />
+        <Link href="/forgot-password" className="self-end text-xs font-medium text-brand-600 hover:underline">
+          Forgot password?
+        </Link>
         {state?.error && (
           <p className="text-sm font-medium text-red-600">{state.error}</p>
         )}

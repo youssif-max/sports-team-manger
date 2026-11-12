@@ -27,6 +27,13 @@ export default async function EditPlayerPage({
 
   const action = updateMembership.bind(null, teamId, userId);
 
+  // Account details (photo, phone, email) belong to the account holder; a
+  // coach can only change them for roster-only entries that have no login.
+  const isPlaceholder = !membership.user.passwordHash;
+  const isSelf = viewer.id === userId;
+  const canEditAccountFields = isSelf || (isPlaceholder && viewerIsPrivileged);
+  const canEditEmail = isPlaceholder && viewerIsPrivileged;
+
   return (
     <div className="mx-auto w-full max-w-md">
       <h1 className="mb-4 text-xl font-bold">Edit {membership.user.name}</h1>
@@ -50,34 +57,49 @@ export default async function EditPlayerPage({
           </label>
         </div>
 
-        <label className="text-sm font-medium">
-          Photo URL
-          <input
-            name="photoUrl"
-            defaultValue={membership.user.photoUrl ?? ""}
-            className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-          />
-        </label>
+        {canEditAccountFields ? (
+          <>
+            <label className="text-sm font-medium">
+              Photo URL
+              <input
+                name="photoUrl"
+                defaultValue={membership.user.photoUrl ?? ""}
+                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+              />
+            </label>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm font-medium">
-            Email
-            <input
-              name="email"
-              type="email"
-              defaultValue={membership.user.email ?? ""}
-              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-            />
-          </label>
-          <label className="text-sm font-medium">
-            Phone
-            <input
-              name="phone"
-              defaultValue={membership.user.phone ?? ""}
-              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-            />
-          </label>
-        </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm font-medium">
+                Email
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={membership.user.email ?? ""}
+                  readOnly={!canEditEmail}
+                  className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm read-only:bg-neutral-100 read-only:text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:read-only:bg-neutral-800"
+                />
+              </label>
+              <label className="text-sm font-medium">
+                Phone
+                <input
+                  name="phone"
+                  defaultValue={membership.user.phone ?? ""}
+                  className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                />
+              </label>
+            </div>
+            {!canEditEmail && (
+              <p className="-mt-1 text-xs text-neutral-400">
+                Change your email under Account Settings.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="rounded-lg bg-neutral-50 p-3 text-xs text-neutral-500 dark:bg-neutral-800">
+            This player has their own account, so their photo, email and phone can only be changed
+            by them.
+          </p>
+        )}
 
         <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
           <legend className="px-1 text-xs font-semibold text-neutral-500">

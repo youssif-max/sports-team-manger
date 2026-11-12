@@ -5,6 +5,8 @@ import { getCurrentUser, getMembership } from "@/lib/auth";
 import { HighlightForm } from "@/components/HighlightForm";
 import { HighlightCard } from "@/components/HighlightCard";
 import { isTeamPremium, FREE_HIGHLIGHT_LIMIT } from "@/lib/billing";
+import { getBlockedIds } from "@/lib/blocks";
+import { isNativeApp } from "@/lib/nativeApp";
 
 export default async function HighlightsPage({
   params,
@@ -16,9 +18,15 @@ export default async function HighlightsPage({
   const { teamId } = await params;
   const { player: playerFilter } = await searchParams;
 
+  const viewer = await getCurrentUser();
+  const blockedIds = viewer ? await getBlockedIds(viewer.id) : [];
+
   const [highlights, players, team, user] = await Promise.all([
     prisma.highlight.findMany({
-      where: { teamId },
+      where: {
+        teamId,
+        ...(blockedIds.length ? { NOT: { postedById: { in: blockedIds } } } : {}),
+      },
       include: { user: true, postedBy: true },
       orderBy: { createdAt: "desc" },
     }),
@@ -28,12 +36,13 @@ export default async function HighlightsPage({
       orderBy: { user: { name: "asc" } },
     }),
     prisma.team.findUniqueOrThrow({ where: { id: teamId } }),
-    getCurrentUser(),
+    Promise.resolve(viewer),
   ]);
 
   const membership = user ? await getMembership(teamId, user.id) : null;
   const isPrivileged = membership?.role === "ADMIN" || membership?.role === "COACH";
   const premium = isTeamPremium(team);
+  const native = await isNativeApp();
   const atLimit = !premium && highlights.length >= FREE_HIGHLIGHT_LIMIT;
 
   // Reel chips: only players who actually have a tagged clip.
@@ -55,15 +64,18 @@ export default async function HighlightsPage({
             <Sparkles size={16} /> Free plan limit reached
           </p>
           <p className="text-amber-800 dark:text-amber-300">
-            This team has posted {highlights.length}/{FREE_HIGHLIGHT_LIMIT} highlights on the free
-            plan. Upgrade to Premium for unlimited highlights.
+            This team has posted {highlights.length}/{FREE_HIGHLIGHT_LIMIT} highlights, the limit
+            for the free plan.
+            {native ? "" : " Upgrade to Premium for unlimited highlights."}
           </p>
-          <Link
-            href={`/teams/${teamId}/premium`}
-            className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
-          >
-            Upgrade to Premium
-          </Link>
+          {!native && (
+            <Link
+              href={`/teams/${teamId}/premium`}
+              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+            >
+              Upgrade to Premium
+            </Link>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -137,6 +149,7 @@ export default async function HighlightsPage({
               postedByName: h.postedBy?.name ?? null,
             }}
             canDelete={isPrivileged || h.postedById === user?.id}
+            canReport={h.postedById !== user?.id}
           />
         ))}
       </div>

@@ -48,6 +48,16 @@ export default function TermsPage() {
         </ul>
       </LegalSection>
 
+      <LegalSection heading="4a. Reporting and Removal">
+        <p>
+          Anyone can report a chat message or highlight, and block another member. Coaches and
+          admins can remove reported content, and we may remove content or suspend accounts that
+          harass others, share inappropriate material, or put a minor at risk. We have zero
+          tolerance for content that endangers children. To report a serious concern directly,
+          email the address in the Contact section below.
+        </p>
+      </LegalSection>
+
       <LegalSection heading="5. Your Content">
         <p>
           You retain ownership of the content you upload (photos, files, chat messages,

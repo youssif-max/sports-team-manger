@@ -27,11 +27,12 @@ const TABS = [
   { href: "/premium", label: "Premium", Icon: Sparkles },
 ];
 
-export function TeamNav({ teamId }: { teamId: string }) {
+export function TeamNav({ teamId, hidePremium = false }: { teamId: string; hidePremium?: boolean }) {
+  const tabs = hidePremium ? TABS.filter((t) => t.href !== "/premium") : TABS;
   return (
     <nav className="sticky top-[57px] z-10 -mx-4 overflow-x-auto border-b border-neutral-200 bg-white/90 px-4 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90 sm:mx-0 sm:rounded-xl sm:border sm:px-2">
       <ul className="flex min-w-max gap-1 py-2 sm:min-w-0">
-        {TABS.map(({ href, label, Icon }) => (
+        {tabs.map(({ href, label, Icon }) => (
           <li key={label}>
             <Link
               href={`/teams/${teamId}${href}`}

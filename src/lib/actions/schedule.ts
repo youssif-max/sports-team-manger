@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { sendPushToTeam } from "@/lib/push";
-import { requireRole, requireMembership } from "@/lib/auth";
+import { requireRole, requireMembership, isGuardianOf } from "@/lib/auth";
 import { rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
 
 async function notifyGameResult(
@@ -138,10 +138,11 @@ export async function setRsvp(
   status: "IN" | "OUT" | "MAYBE" | "PENDING"
 ) {
   const { user, membership } = await requireMembership(teamId);
-  // Anyone can set their own RSVP; only an admin/coach may set it on behalf
-  // of someone else (e.g. a roster placeholder with no login of their own).
+  // Anyone can set their own RSVP; an admin/coach may set it on behalf of
+  // someone else (e.g. a roster placeholder with no login of their own), and
+  // a parent can answer for a child they've been linked to.
   if (userId !== user.id && membership.role !== "ADMIN" && membership.role !== "COACH") {
-    return;
+    if (!(await isGuardianOf(teamId, user.id, userId))) return;
   }
   if (!(await rateLimitUser(user.id, "rsvp", 60, RATE_WINDOWS.MINUTE))) return;
 

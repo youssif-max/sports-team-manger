@@ -65,6 +65,13 @@ export default async function EventDetailPage({
   const isPrivileged =
     myMembership?.role === "ADMIN" || myMembership?.role === "COACH";
 
+  const linkedChildren = user
+    ? await prisma.parentLink.findMany({
+        where: { teamId, parentId: user.id },
+        include: { child: true },
+      })
+    : [];
+
   // Other players' RSVP, attendance and stats are for coaches/admins only;
   // everyone else sees just their own row plus anonymous RSVP totals.
   const visibleMembers = isPrivileged ? members : members.filter((m) => m.userId === user?.id);
@@ -129,6 +136,28 @@ export default async function EventDetailPage({
             action={setRsvpForm.bind(null, teamId, eventId, user.id)}
             className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
           />
+        </section>
+      )}
+
+      {linkedChildren.length > 0 && (
+        <section className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <h2 className="mb-2 text-sm font-semibold uppercase text-neutral-400">
+            RSVP for your {linkedChildren.length === 1 ? "child" : "children"}
+          </h2>
+          <div className="flex flex-col gap-2">
+            {linkedChildren.map((l) => (
+              <div key={l.id} className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">{l.child.name}</span>
+                <AutoSubmitSelect
+                  name="status"
+                  defaultValue={rsvpByUser.get(l.childId)?.status ?? "PENDING"}
+                  options={RSVP_OPTIONS}
+                  action={setRsvpForm.bind(null, teamId, eventId, l.childId)}
+                  className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                />
+              </div>
+            ))}
+          </div>
         </section>
       )}
 

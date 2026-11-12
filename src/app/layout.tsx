@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { connection } from "next/server";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { CookieNotice } from "@/components/CookieNotice";
 import "./globals.css";
@@ -39,7 +40,11 @@ export const viewport: Viewport = {
   themeColor: "#1d4ed8",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // The CSP nonce is generated per request in proxy.ts, so every page has to
+  // render per request rather than at build time.
+  await connection();
+
   return (
     <html
       lang="en"

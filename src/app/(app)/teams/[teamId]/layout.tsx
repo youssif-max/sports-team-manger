@@ -1,12 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, Settings } from "lucide-react";
+import { Sparkles, Settings, Flag } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership } from "@/lib/auth";
 import { TeamNav } from "@/components/TeamNav";
 import { CopyInviteLink } from "@/components/CopyInviteLink";
 import { teamTypeLabel } from "@/lib/format";
 import { isTeamPremium } from "@/lib/billing";
+import { isNativeApp } from "@/lib/nativeApp";
 
 export default async function TeamLayout({
   children,
@@ -26,6 +27,10 @@ export default async function TeamLayout({
   if (!membership) redirect("/?error=not-a-member");
 
   const canSeeJoinCode = membership.role === "ADMIN" || membership.role === "COACH";
+  const openReports = canSeeJoinCode
+    ? await prisma.report.count({ where: { teamId, status: "OPEN" } })
+    : 0;
+  const native = await isNativeApp();
 
   return (
     <div className="flex flex-col gap-4">
@@ -72,6 +77,20 @@ export default async function TeamLayout({
           <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold capitalize backdrop-blur">
             {membership.role.toLowerCase()}
           </span>
+          {canSeeJoinCode && (
+            <Link
+              href={`/teams/${teamId}/reports`}
+              title="Reports"
+              className="relative rounded-full bg-white/20 p-1.5 backdrop-blur hover:bg-white/30"
+            >
+              <Flag size={14} />
+              {openReports > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold">
+                  {openReports}
+                </span>
+              )}
+            </Link>
+          )}
           {membership.role === "ADMIN" && (
             <Link
               href={`/teams/${teamId}/settings`}
@@ -84,7 +103,7 @@ export default async function TeamLayout({
         </div>
       </div>
 
-      <TeamNav teamId={teamId} />
+      <TeamNav teamId={teamId} hidePremium={native} />
 
       {children}
     </div>

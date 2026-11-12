@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isTeamPremium } from "@/lib/billing";
 import { getCurrentUser, getMembership } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
+import { isNativeApp } from "@/lib/nativeApp";
 
 export default async function AnalyticsPage({
   params,
@@ -12,6 +13,7 @@ export default async function AnalyticsPage({
 }) {
   const { teamId } = await params;
   const team = await prisma.team.findUniqueOrThrow({ where: { id: teamId } });
+  const native = await isNativeApp();
 
   if (!isTeamPremium(team)) {
     return (
@@ -22,12 +24,14 @@ export default async function AnalyticsPage({
           See season-long leaderboards per stat and a game-by-game trend for your team, beyond
           the running totals on each player&apos;s profile.
         </p>
-        <Link
-          href={`/teams/${teamId}/premium`}
-          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
-        >
-          Upgrade to Premium
-        </Link>
+        {!native && (
+          <Link
+            href={`/teams/${teamId}/premium`}
+            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+          >
+            Upgrade to Premium
+          </Link>
+        )}
       </div>
     );
   }

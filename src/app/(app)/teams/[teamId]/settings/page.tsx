@@ -4,7 +4,9 @@ import { Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership } from "@/lib/auth";
 import { isTeamPremium } from "@/lib/billing";
-import { updateTeamSettings } from "@/lib/actions/team";
+import { updateTeamSettings, regenerateJoinCode } from "@/lib/actions/team";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { isNativeApp } from "@/lib/nativeApp";
 
 export default async function TeamSettingsPage({
   params,
@@ -21,11 +23,37 @@ export default async function TeamSettingsPage({
 
   const team = await prisma.team.findUniqueOrThrow({ where: { id: teamId } });
   const premium = isTeamPremium(team);
+  const native = await isNativeApp();
   const action = updateTeamSettings.bind(null, teamId);
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
       <h1 className="text-xl font-bold">Team Settings</h1>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <h2 className="text-sm font-semibold uppercase text-neutral-400">Join code</h2>
+        <p className="text-sm">
+          Current code: <span className="font-mono font-semibold tracking-widest">{team.joinCode}</span>
+        </p>
+        <p className="text-xs text-neutral-500">
+          If the code was shared with someone it shouldn&apos;t have been, generate a new one. The
+          old code and invite links stop working immediately; current members aren&apos;t affected.
+        </p>
+        <form action={regenerateJoinCode.bind(null, teamId)}>
+          <ConfirmButton
+            confirmText="Generate a new join code? The old code and any invite links will stop working."
+            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+          >
+            Generate new code
+          </ConfirmButton>
+        </form>
+        <Link
+          href={`/teams/${teamId}/audit`}
+          className="self-start text-xs font-medium text-brand-600 hover:underline"
+        >
+          View activity log →
+        </Link>
+      </section>
 
       <form action={action} className="flex flex-col gap-4">
         <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
@@ -95,12 +123,14 @@ export default async function TeamSettingsPage({
           ) : (
             <div className="flex flex-col items-start gap-2 text-sm text-neutral-500">
               <p>Custom colors and a team logo are a Premium feature.</p>
-              <Link
-                href={`/teams/${teamId}/premium`}
-                className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
-              >
-                Upgrade to Premium
-              </Link>
+              {!native && (
+                <Link
+                  href={`/teams/${teamId}/premium`}
+                  className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+                >
+                  Upgrade to Premium
+                </Link>
+              )}
             </div>
           )}
         </section>

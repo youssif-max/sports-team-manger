@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getMembership } from "@/lib/auth";
 import { rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
+import { getBlockedIds } from "@/lib/blocks";
 
 export async function GET(
   _req: Request,
@@ -25,8 +26,10 @@ export async function GET(
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
+  const blockedIds = await getBlockedIds(user.id);
+
   const messages = await prisma.chatMessage.findMany({
-    where: { teamId },
+    where: { teamId, ...(blockedIds.length ? { authorId: { notIn: blockedIds } } : {}) },
     include: { author: true },
     orderBy: { createdAt: "asc" },
     take: 200,

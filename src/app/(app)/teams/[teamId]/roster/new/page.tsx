@@ -4,10 +4,13 @@ import { getCurrentUser, getMembership } from "@/lib/auth";
 
 export default async function NewPlayerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ teamId: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { teamId } = await params;
+  const { error } = await searchParams;
 
   const user = await getCurrentUser();
   const membership = user ? await getMembership(teamId, user.id) : null;
@@ -20,6 +23,17 @@ export default async function NewPlayerPage({
   return (
     <div className="mx-auto w-full max-w-md">
       <h1 className="mb-4 text-xl font-bold">Add to Roster</h1>
+      {error === "consent" && (
+        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          Please confirm the permission checkbox before adding a player.
+        </p>
+      )}
+      {error === "email-taken" && (
+        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          Someone already has an account with that email. Ask them to join with the team&apos;s join
+          code instead.
+        </p>
+      )}
       <form action={action} className="flex flex-col gap-3">
         <label className="text-sm font-medium">
           Full name
@@ -104,6 +118,15 @@ export default async function NewPlayerPage({
             />
           </div>
         </fieldset>
+
+        <label className="flex items-start gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+          <input type="checkbox" name="consent" required className="mt-0.5" />
+          <span>
+            I have permission to share this person&apos;s details with the team. If they are under
+            13, I am their parent or legal guardian, or I have their parent or guardian&apos;s
+            permission.
+          </span>
+        </label>
 
         <button
           type="submit"

@@ -5,6 +5,7 @@ import { isTeamPremium, PREMIUM_PLANS } from "@/lib/billing";
 import { isStripeConfigured } from "@/lib/stripe";
 import { startCheckout, openBillingPortal } from "@/lib/actions/billing";
 import { formatDate } from "@/lib/format";
+import { isNativeApp } from "@/lib/nativeApp";
 
 const FEATURES = [
   "Unlimited highlights & film",
@@ -32,6 +33,30 @@ export default async function PremiumPage({
   const isAdmin = membership?.role === "ADMIN";
   const premium = isTeamPremium(team);
   const configured = isStripeConfigured() && Boolean(PREMIUM_PLANS.monthly.priceId);
+
+  // Inside the iOS/Android app we show status only — no prices, upgrade
+  // buttons or checkout (Apple requires its own in-app purchase for that).
+  if (await isNativeApp()) {
+    return (
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="flex items-center gap-2">
+          <Sparkles className="text-amber-500" size={20} />
+          <h1 className="text-lg font-bold">{premium ? "Premium team" : "Free plan"}</h1>
+        </div>
+        <ul className="flex flex-col gap-2">
+          {FEATURES.map((f) => (
+            <li key={f} className="flex items-center gap-2 text-sm">
+              <Check
+                size={16}
+                className={premium ? "text-green-600" : "text-neutral-300 dark:text-neutral-600"}
+              />
+              <span className={premium ? "" : "text-neutral-400"}>{f}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">

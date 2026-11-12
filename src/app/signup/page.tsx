@@ -64,8 +64,27 @@ export default function SignupPage() {
           placeholder="Confirm password"
           className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
         />
+        <label className="flex items-start gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+          <input type="checkbox" name="terms" required className="mt-0.5" />
+          <span>
+            I agree to the{" "}
+            <Link href="/terms" className="underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline">
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
         {state?.error && (
           <p className="text-sm font-medium text-red-600">{state.error}</p>
+        )}
+        {state?.message && (
+          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
+            {state.message}
+          </p>
         )}
         <button
           type="submit"
@@ -84,18 +103,6 @@ export default function SignupPage() {
         >
           Sign in
         </Link>
-      </p>
-
-      <p className="text-center text-xs text-neutral-400">
-        By creating an account, you agree to our{" "}
-        <Link href="/terms" className="underline hover:text-neutral-600 dark:hover:text-neutral-300">
-          Terms of Service
-        </Link>{" "}
-        and{" "}
-        <Link href="/privacy" className="underline hover:text-neutral-600 dark:hover:text-neutral-300">
-          Privacy Policy
-        </Link>
-        .
       </p>
     </main>
   );

@@ -31,6 +31,13 @@ export default async function RosterPage({
   const myMembership = user ? await getMembership(teamId, user.id) : null;
   const isAdmin = myMembership?.role === "ADMIN";
   const isPrivileged = isAdmin || myMembership?.role === "COACH";
+  const myChildIds = new Set(
+    user
+      ? (await prisma.parentLink.findMany({ where: { teamId, parentId: user.id } })).map(
+          (l) => l.childId
+        )
+      : []
+  );
 
   const groups: Record<string, typeof memberships> = {
     ADMIN: [],
@@ -94,7 +101,7 @@ export default async function RosterPage({
                     />
                   )}
 
-                  {(isPrivileged || m.userId === user?.id) && (
+                  {(isPrivileged || m.userId === user?.id || myChildIds.has(m.userId)) && (
                     <div className="flex gap-2">
                       <Link
                         href={`/teams/${teamId}/roster/${m.userId}#contact`}

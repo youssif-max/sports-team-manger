@@ -7,16 +7,18 @@ import { HighlightForm } from "@/components/HighlightForm";
 import { HighlightCard } from "@/components/HighlightCard";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { teamTypeLabel } from "@/lib/format";
+import { getBlockedIds } from "@/lib/blocks";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; verified?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { error } = await searchParams;
+  const { error, verified } = await searchParams;
+  const blockedIds = await getBlockedIds(user.id);
 
   const myTeams = await prisma.team.findMany({
     where: { memberships: { some: { userId: user.id } } },
@@ -35,7 +37,10 @@ export default async function DashboardPage({
   const feed =
     myTeams.length > 0
       ? await prisma.highlight.findMany({
-          where: { teamId: { in: myTeams.map((t) => t.id) } },
+          where: {
+            teamId: { in: myTeams.map((t) => t.id) },
+            ...(blockedIds.length ? { NOT: { postedById: { in: blockedIds } } } : {}),
+          },
           include: { user: true, postedBy: true, team: true },
           orderBy: { createdAt: "desc" },
           take: 12,
@@ -45,6 +50,17 @@ export default async function DashboardPage({
   return (
     <>
       <NotificationPrompt />
+
+      {verified === "1" && (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
+          Email confirmed. Thanks!
+        </div>
+      )}
+      {verified === "0" && (
+        <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
+          That confirmation link has expired. Request a new one from the banner above.
+        </div>
+      )}
 
       {error === "not-a-member" && (
         <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
@@ -128,6 +144,7 @@ export default async function DashboardPage({
                       postedByName: h.postedBy?.name ?? null,
                     }}
                     canDelete={role === "ADMIN" || role === "COACH" || h.postedById === user.id}
+                    canReport={h.postedById !== user.id}
                   />
                 );
               })}

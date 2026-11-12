@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Play } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
+import { ReportButton } from "@/components/ReportButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { deleteHighlight } from "@/lib/actions/community";
 import { toEmbedUrl, formatTimestamp } from "@/lib/video";
@@ -23,10 +24,12 @@ export type HighlightCardData = {
 export function HighlightCard({
   h,
   canDelete,
+  canReport = false,
   showTeam = false,
 }: {
   h: HighlightCardData;
   canDelete: boolean;
+  canReport?: boolean;
   showTeam?: boolean;
 }) {
   const embed = toEmbedUrl(h.videoUrl, h.startSeconds, h.endSeconds);
@@ -89,6 +92,8 @@ export function HighlightCard({
       </div>
 
       {h.description && <p className="text-sm">{h.description}</p>}
+
+      {canReport && <ReportButton teamId={h.teamId} targetType="HIGHLIGHT" targetId={h.id} />}
 
       {h.player && (
         <Link

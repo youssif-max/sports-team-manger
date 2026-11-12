@@ -34,6 +34,9 @@ model Team {
   highlights     Highlight[]
   statDefinitions StatDefinition[]
   plays          Play[]
+  reports        Report[]
+  auditLogs      AuditLog[]
+  parentLinks    ParentLink[]
 
   // Premium subscription (billed to the whole team, managed via Stripe)
   stripeCustomerId     String?   @unique
@@ -51,9 +54,18 @@ model User {
   passwordHash         String?
   phone                String?
   dateOfBirth          DateTime?
+  emailVerifiedAt      DateTime?
+  termsAcceptedAt      DateTime?
   failedLoginAttempts  Int              @default(0)
   lockedUntil          DateTime?
   createdAt            DateTime         @default(now())
+  emailTokens          EmailToken[]
+  reportsMade          Report[]         @relation("ReportReporter")
+  blocksMade           Block[]          @relation("Blocker")
+  blocksReceived       Block[]          @relation("Blocked")
+  auditActions         AuditLog[]
+  childLinks           ParentLink[]     @relation("ParentOf")
+  parentLinks          ParentLink[]     @relation("ChildOf")
   memberships          TeamMembership[]
   chatMessages         ChatMessage[]
   announcements        Announcement[]
@@ -72,10 +84,96 @@ model Session {
   token     String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
+  userAgent String?
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+enum EmailTokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+  CLAIM_PROFILE
+}
+
+model EmailToken {
+  id        String         @id @default(cuid())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      EmailTokenType
+  tokenHash String         @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime       @default(now())
+
+  @@index([userId, type])
+}
+
+enum ReportTarget {
+  CHAT_MESSAGE
+  HIGHLIGHT
+  ANNOUNCEMENT
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  team         Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId       String
+  reporter     User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId   String
+  targetType   ReportTarget
+  targetId     String
+  targetUserId String?
+  reason       String
+  status       ReportStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+
+  @@index([teamId, status])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockerId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blockedId String
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorId   String?
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([teamId, createdAt])
+}
+
+// Links a parent/guardian account to a child's roster entry so they can see
+// that one child's private details (and RSVP for them).
+model ParentLink {
+  id       String @id @default(cuid())
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId   String
+  parent   User   @relation("ParentOf", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId String
+  child    User   @relation("ChildOf", fields: [childId], references: [id], onDelete: Cascade)
+  childId  String
+
+  @@unique([teamId, parentId, childId])
 }
 
 model RateLimit {

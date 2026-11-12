@@ -1,9 +1,12 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
-const COOKIE_NAME = "session";
+// The __Host- prefix makes browsers refuse the cookie unless it's Secure, has
+// Path=/ and no Domain — so it can't be overwritten from a subdomain. It needs
+// HTTPS, so it's only used in production.
+const COOKIE_NAME = process.env.NODE_ENV === "production" ? "__Host-session" : "session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
 export async function getCurrentUser() {
@@ -32,8 +35,14 @@ export async function getCurrentUser() {
 export async function createSessionCookie(userId: string) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+  const userAgent = ((await headers()).get("user-agent") ?? "").slice(0, 300) || null;
 
-  await prisma.session.create({ data: { token, userId, expiresAt } });
+  await prisma.session.create({ data: { token, userId, expiresAt, userAgent } });
+
+  // Keep the table tidy: drop this user's expired sessions.
+  void prisma.session
+    .deleteMany({ where: { userId, expiresAt: { lt: new Date() } } })
+    .catch(() => undefined);
 
   const store = await cookies();
   store.set(COOKIE_NAME, token, {
@@ -63,6 +72,14 @@ export async function getMembership(teamId: string, userId: string) {
   return prisma.teamMembership.findUnique({
     where: { teamId_userId: { teamId, userId } },
   });
+}
+
+// A parent/guardian a coach or admin has linked to one specific child.
+export async function isGuardianOf(teamId: string, parentId: string, childId: string) {
+  const link = await prisma.parentLink.findUnique({
+    where: { teamId_parentId_childId: { teamId, parentId, childId } },
+  });
+  return Boolean(link);
 }
 
 export class AuthError extends Error {}

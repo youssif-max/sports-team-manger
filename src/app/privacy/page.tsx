@@ -44,6 +44,23 @@ export default function PrivacyPolicyPage() {
           part of running the service and keeping it secure.
         </p>
         <p>
+          <strong>Security and account records</strong>: when you sign in we store a short
+          description of your device (for example &quot;Safari on iPhone&quot;) and the sign-in
+          time so you can see and sign out your own sessions. We record when you accepted our Terms
+          and whether you&apos;ve confirmed your email. Team admins can see an activity log of
+          changes made to their team (role changes, members added or removed, join-code changes).
+        </p>
+        <p>
+          <strong>Reports and blocks</strong>: if you report content or block someone, we store
+          that so coaches and admins can review reports and so blocked people stay hidden from
+          you.
+        </p>
+        <p>
+          <strong>Parent and guardian links</strong>: a coach or admin can link a parent account to
+          a child&apos;s roster entry so the parent can see that child&apos;s details and RSVP for
+          them.
+        </p>
+        <p>
           <strong>Billing data</strong>: if a team subscribes to Premium, payment is handled
           entirely by Stripe. We never see or store your card number — we only keep the
           subscription&apos;s status and renewal date so we know which teams have Premium
@@ -118,16 +135,20 @@ export default function PrivacyPolicyPage() {
         <ul className="list-disc pl-5">
           <li>Update or remove your contact info from your Roster profile at any time.</li>
           <li>Turn push notifications off from your device&apos;s notification settings.</li>
+          <li>Download a copy of your data, see where you&apos;re signed in, and block people, all from Account Settings.</li>
           <li>Ask a team admin to remove you from a team, or delete your account yourself from Account Settings.</li>
         </ul>
       </LegalSection>
 
       <LegalSection heading="8. Third-Party Services">
         <p>
-          SportSync runs on Vercel (hosting) and Neon (database), and uses Stripe to process
-          Premium subscription payments. These providers process data on our behalf under their
-          own security and privacy commitments; we don&apos;t use any third-party advertising or
-          analytics services.
+          SportSync runs on Vercel (hosting) and Neon (database), uses Stripe to process Premium
+          subscription payments, and uses Resend to send account emails (confirmation and
+          password-reset links). When you choose a password we check it against the Have I Been
+          Pwned breach list using a method that only sends the first five characters of a
+          one-way hash — never the password itself. These providers process data on our behalf
+          under their own security and privacy commitments; we don&apos;t use any third-party
+          advertising or analytics services.
         </p>
       </LegalSection>
 
