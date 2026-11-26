@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Big version jumps (Prisma 6 -> 7, TypeScript 5 -> 7, ...) need real
+    # migration work, so Dependabot only proposes minor/patch updates.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types: [minor, patch]
