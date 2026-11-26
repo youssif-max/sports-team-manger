@@ -9,6 +9,7 @@ import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { teamTypeLabel } from "@/lib/format";
 import { getBlockedIds } from "@/lib/blocks";
 import { cancelJoinRequest } from "@/lib/actions/team";
+import { isUploadConfigured } from "@/lib/blob";
 
 export default async function DashboardPage({
   searchParams,
@@ -45,6 +46,7 @@ export default async function DashboardPage({
       ? await prisma.highlight.findMany({
           where: {
             teamId: { in: myTeams.map((t) => t.id) },
+            hiddenAt: null,
             ...(blockedIds.length ? { NOT: { postedById: { in: blockedIds } } } : {}),
           },
           include: { user: true, postedBy: true, team: true },
@@ -134,14 +136,27 @@ export default async function DashboardPage({
 
       {myTeams.length > 0 && (
         <section className="flex flex-col gap-3">
-          <div>
-            <h2 className="text-xl font-bold">Highlight Feed</h2>
-            <p className="text-xs text-neutral-500">
-              Post your best plays for your coaches and teammates. Only members of your teams can
-              see these.
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-bold">Your teams&apos; highlights</h2>
+              <p className="text-xs text-neutral-500">
+                Post your best plays for your coaches and teammates, or share them with everyone
+                on SportSync.
+              </p>
+            </div>
+            <Link
+              href="/highlights"
+              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+            >
+              Browse public highlights →
+            </Link>
           </div>
-          <HighlightForm mode="feed" teams={myTeams.map((t) => ({ id: t.id, name: t.name }))} />
+          <HighlightForm
+            mode="feed"
+            userId={user.id}
+            uploadEnabled={isUploadConfigured()}
+            teams={myTeams.map((t) => ({ id: t.id, name: t.name }))}
+          />
           {feed.length === 0 ? (
             <p className="text-sm text-neutral-400">No highlights yet — be the first to post one.</p>
           ) : (
@@ -159,6 +174,8 @@ export default async function DashboardPage({
                       title: h.title,
                       description: h.description,
                       videoUrl: h.videoUrl,
+                      uploaded: h.uploaded,
+                      public: h.visibility === "PUBLIC",
                       startSeconds: h.startSeconds,
                       endSeconds: h.endSeconds,
                       createdAt: h.createdAt,

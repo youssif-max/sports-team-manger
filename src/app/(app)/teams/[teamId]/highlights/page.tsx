@@ -7,6 +7,7 @@ import { HighlightCard } from "@/components/HighlightCard";
 import { isTeamPremium, FREE_HIGHLIGHT_LIMIT } from "@/lib/billing";
 import { getBlockedIds } from "@/lib/blocks";
 import { isNativeApp } from "@/lib/nativeApp";
+import { isUploadConfigured } from "@/lib/blob";
 
 export default async function HighlightsPage({
   params,
@@ -43,16 +44,21 @@ export default async function HighlightsPage({
   const isPrivileged = membership?.role === "ADMIN" || membership?.role === "COACH";
   const premium = isTeamPremium(team);
   const native = await isNativeApp();
-  const atLimit = !premium && highlights.length >= FREE_HIGHLIGHT_LIMIT;
+  // Only team-only posts count toward the free cap (public ones are uncapped).
+  const teamOnlyCount = highlights.filter((h) => h.visibility === "TEAM").length;
+  const atLimit = !premium && teamOnlyCount >= FREE_HIGHLIGHT_LIMIT;
+
+  // Auto-hidden (reported) posts are only shown to coaches/admins for review.
+  const shown = highlights.filter((h) => !h.hiddenAt || isPrivileged);
 
   // Reel chips: only players who actually have a tagged clip.
   const reelPlayers = new Map<string, string>();
-  for (const h of highlights) if (h.user) reelPlayers.set(h.user.id, h.user.name);
+  for (const h of shown) if (h.user) reelPlayers.set(h.user.id, h.user.name);
 
   const activeReelName = playerFilter ? reelPlayers.get(playerFilter) : undefined;
   const visible = activeReelName
-    ? highlights.filter((h) => h.userId === playerFilter)
-    : highlights;
+    ? shown.filter((h) => h.userId === playerFilter)
+    : shown;
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,8 +70,8 @@ export default async function HighlightsPage({
             <Sparkles size={16} /> Free plan limit reached
           </p>
           <p className="text-amber-800 dark:text-amber-300">
-            This team has posted {highlights.length}/{FREE_HIGHLIGHT_LIMIT} highlights, the limit
-            for the free plan.
+            This team has posted {teamOnlyCount}/{FREE_HIGHLIGHT_LIMIT} team-only highlights, the
+            limit for the free plan. Posting to everyone on SportSync is still free.
             {native ? "" : " Upgrade to Premium for unlimited highlights."}
           </p>
           {!native && (
@@ -82,11 +88,13 @@ export default async function HighlightsPage({
           <HighlightForm
             mode="team"
             teamId={teamId}
+            userId={user!.id}
+            uploadEnabled={isUploadConfigured()}
             players={isPrivileged ? players.map((p) => ({ userId: p.userId, name: p.user.name })) : []}
           />
           {!premium && (
             <p className="text-xs text-neutral-400">
-              {highlights.length}/{FREE_HIGHLIGHT_LIMIT} highlights used on the free plan.
+              {teamOnlyCount}/{FREE_HIGHLIGHT_LIMIT} team-only highlights used on the free plan.
               {!isPrivileged && membership?.role === "PLAYER" ? " Your posts are tagged to you." : ""}
             </p>
           )}
@@ -140,6 +148,9 @@ export default async function HighlightsPage({
               title: h.title,
               description: h.description,
               videoUrl: h.videoUrl,
+              uploaded: h.uploaded,
+              public: h.visibility === "PUBLIC",
+              hidden: Boolean(h.hiddenAt),
               startSeconds: h.startSeconds,
               endSeconds: h.endSeconds,
               createdAt: h.createdAt,

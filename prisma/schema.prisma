@@ -399,7 +399,23 @@ model Highlight {
   endSeconds   Int?
   createdAt   DateTime @default(now())
 
+  // TEAM = only members of the team; PUBLIC = shown in the Highlights feed to
+  // every signed-in SportSync user (the poster opts in per post).
+  visibility  HighlightVisibility @default(TEAM)
+  // True when the video is a file uploaded to our storage (videoUrl is then
+  // the storage URL) rather than a link to YouTube etc.
+  uploaded    Boolean  @default(false)
+  // Set automatically when enough people report a post; hidden posts leave
+  // every feed until a coach/admin or the app owner reviews them.
+  hiddenAt    DateTime?
+
   @@index([postedById])
+  @@index([visibility, hiddenAt, createdAt])
+}
+
+enum HighlightVisibility {
+  TEAM
+  PUBLIC
 }
 
 model Play {

@@ -94,9 +94,20 @@ export default function PrivacyPolicyPage() {
           stats are visible only to that player and to the team&apos;s coaches and admins. Other
           members of the team see just a player&apos;s name, photo, jersey number and position on
           the roster. Team-wide content (chat, announcements, schedule, standings, playbook and
-          highlights you post) is visible to members of that same team. Highlight videos you post
-          are shared only with the teams you post them to, not publicly. You must have that
+          highlights you post) is visible to members of that same team. You must have that
           team&apos;s join code or an invite link to become a member.
+        </p>
+        <p>
+          <strong>Public highlights.</strong> A highlight is shared with your team only, unless
+          you choose &quot;Everyone on SportSync&quot; when posting and confirm the notice. A
+          public highlight appears in the Highlights feed for every signed-in SportSync user, with
+          your first name, the sport, the title and description you wrote, and the video itself.
+          It does not show your email, phone, team name or profile. You can delete it at any time.
+          Highlights reported by several people, or once for a child-safety concern, are hidden
+          until reviewed. Uploaded videos are stored with our storage provider (Vercel Blob) at a
+          non-guessable web address; anyone who has that exact address can open the file, so
+          don&apos;t post anything you wouldn&apos;t want a link-holder to see. Don&apos;t post
+          videos of other people&apos;s children without their parent or guardian&apos;s permission.
         </p>
       </LegalSection>
 
@@ -151,7 +162,7 @@ export default function PrivacyPolicyPage() {
 
       <LegalSection heading="8. Third-Party Services">
         <p>
-          SportSync runs on Vercel (hosting) and Neon (database), uses Stripe to process Premium
+          SportSync runs on Vercel (hosting and video file storage) and Neon (database), uses Stripe to process Premium
           subscription payments, and uses Resend to send account emails (confirmation and
           password-reset links). When you choose a password we check it against the Have I Been
           Pwned breach list using a method that only sends the first five characters of a

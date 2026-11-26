@@ -67,6 +67,18 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection heading="5a. Public Highlights">
+        <p>
+          If you post a highlight to &quot;Everyone on SportSync&quot;, you allow SportSync to show
+          it to every signed-in user until you or a moderator removes it. You promise that you own
+          or have permission to share the video, that everyone appearing in it (or their parent or
+          guardian, if they are under 18) agrees to it being shared this way, and that it contains
+          nothing unlawful, sexual, hateful, harassing, or that reveals private information such as
+          an address or school. We may hide or remove any highlight, including automatically after
+          reports, and may suspend accounts that break these rules.
+        </p>
+      </LegalSection>
+
       <LegalSection heading="6. Roster Entries for Minors">
         <p>
           If you add a player under 13 to a team roster, you confirm you&apos;re their parent,

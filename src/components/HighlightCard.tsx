@@ -13,6 +13,9 @@ export type HighlightCardData = {
   title: string;
   description: string | null;
   videoUrl: string;
+  uploaded?: boolean;
+  public?: boolean;
+  hidden?: boolean;
   startSeconds: number | null;
   endSeconds: number | null;
   createdAt: Date;
@@ -37,7 +40,20 @@ export function HighlightCard({
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-      {embed ? (
+      {h.hidden && (
+        <p className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          Hidden after reports — only coaches and admins can see this until it&apos;s reviewed.
+        </p>
+      )}
+      {h.uploaded ? (
+        <video
+          src={h.videoUrl}
+          controls
+          playsInline
+          preload="metadata"
+          className="aspect-video w-full rounded-lg bg-black object-contain"
+        />
+      ) : embed ? (
         <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
           <iframe
             src={embed}
@@ -72,6 +88,7 @@ export function HighlightCard({
             )}
             {showTeam && h.teamName ? " · " : ""}
             {h.postedByName ?? "Team"} · {formatDate(h.createdAt)}
+            {h.public ? " · Public" : ""}
             {hasClip
               ? ` · clip ${formatTimestamp(h.startSeconds!)}${
                   h.endSeconds != null ? `–${formatTimestamp(h.endSeconds)}` : ""

@@ -18,9 +18,11 @@ export function proxy(request: NextRequest) {
     // are data:/blob: URLs.
     "img-src 'self' blob: data: https:",
     "font-src 'self' data:",
-    `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
+    // vercel.com/api/blob + *.blob.vercel-storage.com: browser-direct video uploads.
+    `connect-src 'self' https://vercel.com https://*.blob.vercel-storage.com${isDev ? " ws: wss:" : ""}`,
     "frame-src https://www.youtube-nocookie.com",
-    "media-src 'self' blob: data:",
+    // Uploaded highlight videos play from our Vercel Blob store.
+    "media-src 'self' blob: data: https://*.public.blob.vercel-storage.com",
     "worker-src 'self'",
     "manifest-src 'self'",
     "object-src 'none'",

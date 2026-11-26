@@ -18,6 +18,13 @@ See `.env.example` for the full list. Minimum for a private beta:
 Without the Resend keys, forgot-password and profile claims honestly report
 "unavailable" in production instead of pretending to send.
 
+### Video uploads and the public Highlights feed
+- **Storage:** Vercel → your project → **Storage** → **Create** → **Blob** → choose **Public** → connect it to the project (Production). Vercel then adds `BLOB_READ_WRITE_TOKEN` for you; redeploy. Until then the "Upload a video" option is hidden and only YouTube/links work.
+- **Limits to know:** uploads are capped at 60 MB (about a minute). The free Vercel plan includes about 1 GB of storage and 10 GB/month of downloads, so a busy feed will hit it; watch usage. iPhone videos recorded in HEVC play on Apple devices but not every Android/Chrome device — tell people to use Settings → Camera → Formats → Most Compatible.
+- **Unlisted, not private:** uploaded files live at long unguessable web addresses. Anyone holding the exact address can open the file, which is why the posting form warns about it.
+- **Public posts** are opt-in per post (with a consent tick), visible only to signed-in users, show only first name + sport, and allow only uploaded videos or YouTube links. A post hides itself after 3 reports, or after 1 "unsafe toward a minor" report, until a coach/admin or you review it.
+- **Your review page:** set `PLATFORM_ADMIN_USER_IDS` in Vercel to your user id (comma-separate more than one). Then open `/admin/moderation` to remove or restore reported posts. Anyone else gets a 404. Someone must actually check this page and the `SUPPORT_EMAIL` inbox regularly once strangers can post — that person should be an adult.
+
 ## 2. Before real users
 
 - [ ] Stripe **test mode** end to end: subscribe, webhook flips the team to Premium, cancel via the portal, webhook flips it back.

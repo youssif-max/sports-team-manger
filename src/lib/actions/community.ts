@@ -5,9 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { requireRole, requireMembership } from "@/lib/auth";
 import { sendPushToTeam } from "@/lib/push";
 import { isSafeHttpUrl } from "@/lib/url";
-import { parseTimestamp } from "@/lib/video";
+import { parseTimestamp, toEmbedUrl } from "@/lib/video";
 import { isTeamPremium, FREE_HIGHLIGHT_LIMIT } from "@/lib/billing";
 import { rateLimitUser, RATE_WINDOWS } from "@/lib/rateLimit";
+import { isOwnUpload } from "@/lib/blob";
+import { removeHighlights } from "@/lib/highlights";
 
 export type HighlightFormState = { error?: string; success?: boolean } | undefined;
 
@@ -76,23 +78,54 @@ async function createHighlight(teamId: string, formData: FormData): Promise<High
 
   const title = String(formData.get("title") ?? "").trim().slice(0, 200);
   const description = String(formData.get("description") ?? "").trim().slice(0, 2000) || null;
-  const videoUrl = String(formData.get("videoUrl") ?? "").trim();
+  const linkUrl = String(formData.get("videoUrl") ?? "").trim();
+  const uploadUrl = String(formData.get("uploadUrl") ?? "").trim();
   const playerIdRaw = String(formData.get("playerId") ?? "").trim() || null;
   const eventIdRaw = String(formData.get("eventId") ?? "").trim() || null;
+  const visibility: "TEAM" | "PUBLIC" =
+    String(formData.get("visibility") ?? "TEAM") === "PUBLIC" ? "PUBLIC" : "TEAM";
 
   if (!title) return { error: "Give the highlight a title." };
-  if (!videoUrl || !isSafeHttpUrl(videoUrl)) {
-    return { error: "Enter a valid video link starting with http:// or https://." };
+
+  // Posting to the public feed is always a deliberate, confirmed choice.
+  if (visibility === "PUBLIC" && formData.get("publicConsent") !== "on") {
+    return { error: "Confirm the box to post publicly." };
   }
 
-  const startSeconds = parseTimestamp(String(formData.get("start") ?? ""));
-  let endSeconds = parseTimestamp(String(formData.get("end") ?? ""));
+  // Either a file uploaded to our storage (it must be this user's own upload)
+  // or a link to a video elsewhere.
+  let videoUrl: string;
+  let uploaded = false;
+  if (uploadUrl) {
+    if (!isOwnUpload(uploadUrl, user.id)) return { error: "That upload isn't valid. Try again." };
+    if (await prisma.highlight.findFirst({ where: { videoUrl: uploadUrl }, select: { id: true } })) {
+      return { error: "That video was already posted." };
+    }
+    videoUrl = uploadUrl;
+    uploaded = true;
+  } else {
+    if (!linkUrl || !isSafeHttpUrl(linkUrl)) {
+      return { error: "Add a video file or a valid link starting with http:// or https://." };
+    }
+    // Strangers will see public posts, so those can't point at arbitrary sites
+    // (phishing, malware) — only YouTube, which we embed, or an uploaded file.
+    if (visibility === "PUBLIC" && !toEmbedUrl(linkUrl)) {
+      return { error: "Public posts need an uploaded video or a YouTube link." };
+    }
+    videoUrl = linkUrl;
+  }
+
+  // Clip windows only apply to links (YouTube); uploaded files play as-is.
+  const startSeconds = uploaded ? null : parseTimestamp(String(formData.get("start") ?? ""));
+  let endSeconds = uploaded ? null : parseTimestamp(String(formData.get("end") ?? ""));
   if (endSeconds != null && endSeconds <= (startSeconds ?? 0)) endSeconds = null;
 
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team) return { error: "Team not found." };
-  if (!isTeamPremium(team)) {
-    const count = await prisma.highlight.count({ where: { teamId } });
+  // The free-plan cap only counts team-only highlights; posting to the public
+  // feed is open to everyone (and is covered by the rate limit above).
+  if (visibility === "TEAM" && !isTeamPremium(team)) {
+    const count = await prisma.highlight.count({ where: { teamId, visibility: "TEAM" } });
     if (count >= FREE_HIGHLIGHT_LIMIT) {
       return {
         error: `Free teams can hold ${FREE_HIGHLIGHT_LIMIT} highlights. A team admin can upgrade to Premium for unlimited.`,
@@ -127,6 +160,8 @@ async function createHighlight(teamId: string, formData: FormData): Promise<High
       title,
       description,
       videoUrl,
+      uploaded,
+      visibility,
       startSeconds,
       endSeconds,
     },
@@ -134,6 +169,7 @@ async function createHighlight(teamId: string, formData: FormData): Promise<High
 
   revalidatePath(`/teams/${teamId}/highlights`);
   revalidatePath("/");
+  revalidatePath("/highlights");
   return { success: true };
 }
 
@@ -162,10 +198,9 @@ export async function deleteHighlight(teamId: string, id: string) {
 
   // You can remove what you posted; coaches/admins can remove anything.
   const isPrivileged = membership.role === "ADMIN" || membership.role === "COACH";
-  await prisma.highlight.deleteMany({
-    where: { id, teamId, ...(isPrivileged ? {} : { postedById: user.id }) },
-  });
+  await removeHighlights({ id, teamId, ...(isPrivileged ? {} : { postedById: user.id }) });
 
   revalidatePath(`/teams/${teamId}/highlights`);
   revalidatePath("/");
+  revalidatePath("/highlights");
 }
